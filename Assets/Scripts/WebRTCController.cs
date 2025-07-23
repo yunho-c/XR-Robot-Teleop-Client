@@ -48,8 +48,7 @@ public class WebRTCController : MonoBehaviour
 
     void Start()
     {
-        statusText.text = "Starting WebRTC...";
-        StartCoroutine(StartWebRTC());
+        statusText.text = "Ready to connect.";
     }
 
     void Update()
@@ -65,6 +64,56 @@ public class WebRTCController : MonoBehaviour
             SendBodyPoseData();
         }
         // #endif
+    }
+
+    public void SetServerIp(string ipAddress)
+    {
+        serverUrl = "http://" + ipAddress + ":8080/offer";
+        Debug.Log("Server URL set to: " + serverUrl);
+    }
+
+    public void StartConnection()
+    {
+        if (pc != null && (pc.ConnectionState == RTCPeerConnectionState.Connected || pc.ConnectionState == RTCPeerConnectionState.Connecting))
+        {
+            Debug.LogWarning("WebRTC connection is already active or connecting.");
+            return;
+        }
+        statusText.text = "Starting WebRTC...";
+        StartCoroutine(StartWebRTC());
+    }
+
+    public void StopConnection()
+    {
+        if (cameraChannel != null)
+        {
+            cameraChannel.Close();
+            cameraChannel = null;
+        }
+        if (bodyPoseChannel != null)
+        {
+            bodyPoseChannel.Close();
+            bodyPoseChannel = null;
+        }
+        if (pc != null)
+        {
+            pc.Close();
+            pc = null;
+        }
+        statusText.text = "Disconnected.";
+        Debug.Log("WebRTC connection closed.");
+    }
+
+    public void ToggleConnection(bool isOn)
+    {
+        if (isOn)
+        {
+            StartConnection();
+        }
+        else
+        {
+            StopConnection();
+        }
     }
 
     // #if UNITY_ANDROID
@@ -118,7 +167,7 @@ public class WebRTCController : MonoBehaviour
         }
 
         // Send offer to server
-        statusText.text = "Sending offer...";
+        statusText.text = $"Sending offer to {serverUrl}...";
         SignalingMessage offerMessage = new SignalingMessage { type = "offer", sdp = desc.sdp };
         string jsonOffer = JsonUtility.ToJson(offerMessage);
 
@@ -255,9 +304,7 @@ public class WebRTCController : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        if (cameraChannel != null) cameraChannel.Close();
-        if (bodyPoseChannel != null) bodyPoseChannel.Close();
-        if (pc != null) pc.Close();
+        StopConnection();
     }
 
     private static RTCConfiguration GetSelectedSdpSemantics()
