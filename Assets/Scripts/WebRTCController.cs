@@ -69,6 +69,7 @@ public class WebRTCController : MonoBehaviour
     public void SetServerIp(string ipAddress)
     {
         serverUrl = "http://" + ipAddress + ":8080/offer";
+        statusText.text = $"Server URL set to: {serverUrl}";
         Debug.Log("Server URL set to: " + serverUrl);
     }
 
@@ -183,7 +184,7 @@ public class WebRTCController : MonoBehaviour
             if (www.result != UnityWebRequest.Result.Success)
             {
                 Debug.LogError("Error sending offer: " + www.error);
-                statusText.text = "Error sending offer.";
+                statusText.text = $"Error sending offer: {www.error}";
                 yield break;
             }
 
