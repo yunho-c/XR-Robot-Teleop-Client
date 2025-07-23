@@ -1682,17 +1682,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &270512501 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: -2148279449728116217, guid: 8f60065df164ffa40b77cad3c7dc805e, type: 3}
-  m_PrefabInstance: {fileID: 270512497}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 270512499}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be3ebb6547662534aaef8337c5627f3b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &277113815
 GameObject:
   m_ObjectHideFlags: 0
@@ -8723,7 +8712,7 @@ GameObject:
   - component: {fileID: 1515905725}
   - component: {fileID: 1515905724}
   m_Layer: 0
-  m_Name: BodyTrackingManager
+  m_Name: BodyPoseManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8738,12 +8727,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1515905723}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 828ad79db391b764abcf8a1ee88bf625, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ae5c6a28c978834da9d9da1b75fa7a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   skeleton: {fileID: 420021385}
-  body: {fileID: 270512501}
-  logAsJson: 0
 --- !u!4 &1515905725
 Transform:
   m_ObjectHideFlags: 0
@@ -10314,6 +10301,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serverUrl: http://localhost:8080/offer
   vrCamera: {fileID: 1187398185}
+  bodyPoseProvider: {fileID: 1515905724}
   statusText: {fileID: 2043982452}
   videoImage: {fileID: 0}
   receiveVideo: 1
