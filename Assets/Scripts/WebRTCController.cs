@@ -70,19 +70,32 @@ public class WebRTCController : MonoBehaviour
         }
     }
 
+    void OnEnable()
+    {
+        // #if UNITY_ANDROID
+        if (bodyPoseProvider != null)
+        {
+            bodyPoseProvider.OnPoseUpdated += OnBodyPoseUpdated;
+        }
+        // #endif
+    }
+
+    void OnDisable()
+    {
+        // #if UNITY_ANDROID
+        if (bodyPoseProvider != null)
+        {
+            bodyPoseProvider.OnPoseUpdated -= OnBodyPoseUpdated;
+        }
+        // #endif
+    }
+
     void Update()
     {
         if (cameraChannel != null && cameraChannel.ReadyState == RTCDataChannelState.Open)
         {
             SendOrientation();
         }
-
-        // #if UNITY_ANDROID
-        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open && bodyPoseProvider != null)
-        {
-            SendBodyPoseData();
-        }
-        // #endif
     }
 
     public void SetServerIp(string ipAddress)
@@ -139,12 +152,15 @@ public class WebRTCController : MonoBehaviour
     }
 
     // #if UNITY_ANDROID
-    private void SendBodyPoseData()
+    private void OnBodyPoseUpdated(BodyPoseProvider.PoseData poseData)
     {
-        if (bodyPoseProvider.CurrentPoseData.bones != null && bodyPoseProvider.CurrentPoseData.bones.Count > 0)
+        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open)
         {
-            string jsonPose = JsonUtility.ToJson(bodyPoseProvider.CurrentPoseData);
-            bodyPoseChannel.Send(jsonPose);
+            if (poseData.bones != null && poseData.bones.Count > 0)
+            {
+                string jsonPose = JsonUtility.ToJson(poseData);
+                bodyPoseChannel.Send(jsonPose);
+            }
         }
     }
     // #endif

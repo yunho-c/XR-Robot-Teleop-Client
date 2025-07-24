@@ -1,6 +1,7 @@
-using UnityEngine;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Assertions;
 using Meta.XR.Movement.Retargeting;
 
 public class BodyPoseProvider : MonoBehaviour
@@ -30,9 +31,8 @@ public class BodyPoseProvider : MonoBehaviour
     #endregion
 
     #region Public Fields
-    [Tooltip("The MetaSourceDataProvider component that provides the raw tracking data.")]
+    // [Tooltip("The MetaSourceDataProvider component that provides the raw tracking data.")]
     // public MetaSourceDataProvider sourceDataProvider;
-    public MetaSourceDataProvider sourceDataProvider;
     #endregion
 
     #region Public Properties
@@ -42,15 +42,25 @@ public class BodyPoseProvider : MonoBehaviour
     public PoseData CurrentPoseData { get; private set; }
     #endregion
 
+    #region Private Fields
+    private ISourceDataProvider sourceDataProvider;
+    #endregion
+
     #region Events
     /// <summary>
-    /// Event that is invoked every LateUpdate with the latest tracking data.
+    /// Event that is invoked every Update with the latest tracking data.
     /// Other scripts can subscribe to this to receive pose updates.
     /// </summary>
     public event Action<PoseData> OnPoseUpdated;
     #endregion
 
     #region Unity Methods
+    void Awake()
+    {
+        sourceDataProvider = gameObject.GetComponent<ISourceDataProvider>();
+        Assert.IsNotNull(sourceDataProvider, "Must have a skeleton data provider.");
+    }
+
     void Start()
     {
         if (sourceDataProvider == null)
@@ -62,10 +72,11 @@ public class BodyPoseProvider : MonoBehaviour
         InitializePoseData();
     }
 
-    void LateUpdate()
+    void Update()
     {
         if (!sourceDataProvider.IsPoseValid())
         {
+            Debug.Log("Body pose is invalid. Ignoring.");
             return;
         }
 

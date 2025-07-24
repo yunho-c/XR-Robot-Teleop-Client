@@ -1678,7 +1678,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8156316538343237965, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
       propertyPath: _targetProcessorContainers.Array.data[0]._animationProcessor._isFoldoutExpanded
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8156316538343237965, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
       propertyPath: _targetProcessorContainers.Array.data[0]._twistProcessor._targetData.Array.size
@@ -1767,6 +1767,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1019368882090018644, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 216754182}
+    - targetCorrespondingSourceObject: {fileID: 1019368882090018644, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 216754185}
+    - targetCorrespondingSourceObject: {fileID: 1019368882090018644, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 216754186}
   m_SourcePrefab: {fileID: 100100000, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
 --- !u!4 &216754180 stripped
 Transform:
@@ -1800,17 +1806,32 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &216754183 stripped
+--- !u!114 &216754185
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5439724897015377498, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
-  m_PrefabInstance: {fileID: 216754179}
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 216754181}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be3ebb6547662534aaef8337c5627f3b, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ae5c6a28c978834da9d9da1b75fa7a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &216754186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 216754181}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e987291b65d2874e9df0ec2d2db3053, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logAsJson: 1
+  enableLogging: 1
 --- !u!1 &218735402
 GameObject:
   m_ObjectHideFlags: 0
@@ -3594,7 +3615,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!108 &410087040
 Light:
   m_ObjectHideFlags: 0
@@ -7331,7 +7352,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &832575518
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10500,6 +10521,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 335323023}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1233500351 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 688733258224088205, guid: b8573c816e5b6b54ebf34e1253271cb1, type: 3}
+  m_PrefabInstance: {fileID: 2132985564}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1233642875
 GameObject:
   m_ObjectHideFlags: 0
@@ -12893,6 +12925,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1515905725}
   - component: {fileID: 1515905724}
+  - component: {fileID: 1515905727}
+  - component: {fileID: 1515905726}
   m_Layer: 0
   m_Name: BodyPoseManager
   m_TagString: Untagged
@@ -12912,7 +12946,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ae5c6a28c978834da9d9da1b75fa7a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sourceDataProvider: {fileID: 216754183}
 --- !u!4 &1515905725
 Transform:
   m_ObjectHideFlags: 0
@@ -12928,6 +12961,34 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1515905726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515905723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be3ebb6547662534aaef8337c5627f3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _providedSkeletonType: 1
+  _validBodyTrackingDelay: 0.25
+--- !u!114 &1515905727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515905723}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e987291b65d2874e9df0ec2d2db3053, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logAsJson: 1
+  enableLogging: 1
 --- !u!1 &1517974059
 GameObject:
   m_ObjectHideFlags: 0
@@ -15172,7 +15233,7 @@ MonoBehaviour:
   bodyPoseProvider: {fileID: 1515905724}
   statusText: {fileID: 887255116}
   videoImage: {fileID: 0}
-  ipAddressInputField: {fileID: 0}
+  ipAddressInputField: {fileID: 1233500351}
   receiveVideo: 1
 --- !u!4 &1746223497
 Transform:
