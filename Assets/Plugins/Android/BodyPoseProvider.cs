@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using Meta.XR.Movement.Retargeting;
 
 public class BodyPoseProvider : MonoBehaviour
 {
@@ -29,8 +30,9 @@ public class BodyPoseProvider : MonoBehaviour
     #endregion
 
     #region Public Fields
-    [Tooltip("The OVRSkeleton component that provides the raw tracking data.")]
-    public OVRSkeleton skeleton;
+    [Tooltip("The MetaSourceDataProvider component that provides the raw tracking data.")]
+    // public MetaSourceDataProvider sourceDataProvider;
+    public MetaSourceDataProvider sourceDataProvider;
     #endregion
 
     #region Public Properties
@@ -51,22 +53,22 @@ public class BodyPoseProvider : MonoBehaviour
     #region Unity Methods
     void Start()
     {
-        if (skeleton == null)
+        if (sourceDataProvider == null)
         {
-            Debug.LogError("OVRSkeleton not assigned to BodyPoseProvider. Disabling script.");
+            Debug.LogError("MetaSourceDataProvider not assigned to BodyPoseProvider. Disabling script.");
             this.enabled = false;
             return;
         }
         InitializePoseData();
     }
-    
+
     void LateUpdate()
     {
-        if (!skeleton.IsInitialized || skeleton.Bones == null || skeleton.Bones.Count == 0 || skeleton.Bones.Count != CurrentPoseData.bones.Count)
+        if (!sourceDataProvider.IsPoseValid())
         {
             return;
         }
-        
+
         UpdatePoseData();
         OnPoseUpdated?.Invoke(CurrentPoseData);
     }
@@ -76,21 +78,22 @@ public class BodyPoseProvider : MonoBehaviour
     private void InitializePoseData()
     {
         CurrentPoseData = new PoseData();
-        // Pre-populate the list to the exact size needed.
-        for (int i = 0; i < skeleton.Bones.Count; i++)
+        var tPose = sourceDataProvider.GetSkeletonTPose();
+        for (int i = 0; i < tPose.Length; i++)
         {
-            // We only need to set the Id once. Position and rotation will be updated each frame.
-            CurrentPoseData.bones.Add(new BoneData { id = skeleton.Bones[i].Id });
+            CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
         }
     }
+
     private void UpdatePoseData()
     {
         CurrentPoseData.timestamp = Time.time;
-        for (int i = 0; i < skeleton.Bones.Count; i++)
+        var skeletonPose = sourceDataProvider.GetSkeletonPose();
+        for (int i = 0; i < skeletonPose.Length; i++)
         {
             BoneData boneData = CurrentPoseData.bones[i];
-            boneData.position = skeleton.Bones[i].Transform.position;
-            boneData.rotation = skeleton.Bones[i].Transform.rotation;
+            boneData.position = skeletonPose[i].Position;
+            boneData.rotation = skeletonPose[i].Orientation;
             CurrentPoseData.bones[i] = boneData; // Re-assign the struct to the list
         }
     }

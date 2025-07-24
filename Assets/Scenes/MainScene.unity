@@ -1800,6 +1800,17 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &216754183 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5439724897015377498, guid: 0e5c330c8ce917042b667b967e11994f, type: 3}
+  m_PrefabInstance: {fileID: 216754179}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 216754181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be3ebb6547662534aaef8337c5627f3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &218735402
 GameObject:
   m_ObjectHideFlags: 0
@@ -2225,6 +2236,10 @@ PrefabInstance:
     - target: {fileID: 7904580889813928459, guid: 8f60065df164ffa40b77cad3c7dc805e, type: 3}
       propertyPath: m_Name
       value: HighFidelityCharacter
+      objectReference: {fileID: 0}
+    - target: {fileID: 7904580889813928459, guid: 8f60065df164ffa40b77cad3c7dc805e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7936667094983723285, guid: 8f60065df164ffa40b77cad3c7dc805e, type: 3}
       propertyPath: m_IsActive
@@ -3579,7 +3594,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!108 &410087040
 Light:
   m_ObjectHideFlags: 0
@@ -7316,7 +7331,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &832575518
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12897,7 +12912,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ae5c6a28c978834da9d9da1b75fa7a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skeleton: {fileID: 420021385}
+  sourceDataProvider: {fileID: 216754183}
 --- !u!4 &1515905725
 Transform:
   m_ObjectHideFlags: 0
@@ -15152,11 +15167,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d34efb7ce8c303e499881845ada36924, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverUrl: http://localhost:8080/offer
+  serverUrl: http://10.91.24.146:8080/offer
   vrCamera: {fileID: 1187398185}
   bodyPoseProvider: {fileID: 1515905724}
   statusText: {fileID: 887255116}
   videoImage: {fileID: 0}
+  ipAddressInputField: {fileID: 0}
   receiveVideo: 1
 --- !u!4 &1746223497
 Transform:

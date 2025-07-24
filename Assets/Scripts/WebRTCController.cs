@@ -37,6 +37,7 @@ public class WebRTCController : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private RawImage videoImage;
+    [SerializeField] private TMP_InputField ipAddressInputField;
 
     [Header("WebRTC Settings")]
     [Tooltip("Enable to receive video stream")]
@@ -48,7 +49,25 @@ public class WebRTCController : MonoBehaviour
 
     void Start()
     {
+        serverUrl = PlayerPrefs.GetString("serverUrl", serverUrl);
         statusText.text = "Ready to connect.";
+
+        if (ipAddressInputField != null)
+        {
+            if (!string.IsNullOrEmpty(serverUrl))
+            {
+                // Extract IP address from the server URL
+                try
+                {
+                    System.Uri uri = new System.Uri(serverUrl);
+                    ipAddressInputField.text = uri.Host;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("Error parsing server URL: " + e.Message);
+                }
+            }
+        }
     }
 
     void Update()
@@ -69,6 +88,8 @@ public class WebRTCController : MonoBehaviour
     public void SetServerIp(string ipAddress)
     {
         serverUrl = "http://" + ipAddress + ":8080/offer";
+        PlayerPrefs.SetString("serverUrl", serverUrl);
+        PlayerPrefs.Save();
         statusText.text = $"Server URL set to: {serverUrl}";
         Debug.Log("Server URL set to: " + serverUrl);
     }
@@ -305,6 +326,8 @@ public class WebRTCController : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        PlayerPrefs.SetString("serverUrl", serverUrl);
+        PlayerPrefs.Save();
         StopConnection();
     }
 
