@@ -1,6 +1,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using Unity.WebRTC;
 using UnityEngine.Networking;
@@ -42,10 +43,17 @@ public class WebRTCController : MonoBehaviour
     [Header("WebRTC Settings")]
     [Tooltip("Enable to receive video stream")]
     public bool receiveVideo = true;
+    private const ulong HIGH_WATER_MARK = 16 * 1024 * 1024; // 16 MB
+    private const ulong LOW_WATER_MARK = 4 * 1024 * 1024;   // 4 MB
 
     private RTCPeerConnection pc;
     private RTCDataChannel cameraChannel;
     private RTCDataChannel bodyPoseChannel;
+    private Coroutine _sendBodyPoseCoroutine;
+
+
+    private Queue<byte[]> _bodyPoseDataQueue = new Queue<byte[]>();
+    private bool _isBodyPoseBufferLow = true;
 
     void Start()
     {
@@ -86,6 +94,11 @@ public class WebRTCController : MonoBehaviour
         if (bodyPoseProvider != null)
         {
             bodyPoseProvider.OnPoseUpdated -= OnBodyPoseUpdated;
+        }
+        if (_sendBodyPoseCoroutine != null)
+        {
+            StopCoroutine(_sendBodyPoseCoroutine);
+            _sendBodyPoseCoroutine = null;
         }
         // #endif
     }
@@ -130,6 +143,11 @@ public class WebRTCController : MonoBehaviour
             bodyPoseChannel.Close();
             bodyPoseChannel = null;
         }
+        if (_sendBodyPoseCoroutine != null)
+        {
+            StopCoroutine(_sendBodyPoseCoroutine);
+            _sendBodyPoseCoroutine = null;
+        }
         if (pc != null)
         {
             pc.Close();
@@ -158,8 +176,8 @@ public class WebRTCController : MonoBehaviour
         {
             if (poseData.bones != null && poseData.bones.Count > 0)
             {
-                string jsonPose = JsonUtility.ToJson(poseData);
-                bodyPoseChannel.Send(jsonPose);
+                byte[] binaryData = SerializePoseData(poseData);
+                _bodyPoseDataQueue.Enqueue(binaryData);
             }
         }
     }
@@ -182,7 +200,7 @@ public class WebRTCController : MonoBehaviour
 
         // Create pose data channel
         bodyPoseChannel = pc.CreateDataChannel("body_pose");
-        SetupDataChannelEvents(bodyPoseChannel);
+        SetupBodyPoseDataChannel(bodyPoseChannel);
 
         // Create offer
         var offer = pc.CreateOffer();
@@ -260,8 +278,13 @@ public class WebRTCController : MonoBehaviour
             else if (channel.Label == "body_pose")
             {
                 bodyPoseChannel = channel;
+                SetupBodyPoseDataChannel(channel);
+
             }
-            SetupDataChannelEvents(channel);
+            else
+            {
+                SetupDataChannelEvents(channel);
+            }
         };
 
         // The client receives the video stream
@@ -323,6 +346,69 @@ public class WebRTCController : MonoBehaviour
             // Handle incoming messages if needed
             Debug.Log($"Received message on {channel.Label} channel: {System.Text.Encoding.UTF8.GetString(bytes)}");
         };
+    }
+
+    private void SetupBodyPoseDataChannel(RTCDataChannel channel)
+    {
+        SetupDataChannelEvents(channel);
+
+        channel.OnOpen = () =>
+        {
+            Debug.Log($"{channel.Label} Channel is open!");
+            UnityMainThreadDispatcher.Instance().Enqueue(() =>
+            {
+                statusText.text = $"{channel.Label} channel open.";
+            });
+            if (_sendBodyPoseCoroutine == null)
+            {
+                _sendBodyPoseCoroutine = StartCoroutine(SendBodyPoseCoroutine());
+            }
+        };
+    }
+
+    private IEnumerator SendBodyPoseCoroutine()
+    {
+        while (true)
+        {
+            // Wait until there's data in the queue
+            yield return new WaitUntil(() => _bodyPoseDataQueue.Count > 0);
+
+            // Process the queue as long as the buffer is not full
+            while (_bodyPoseDataQueue.Count > 0 && bodyPoseChannel.BufferedAmount < HIGH_WATER_MARK)
+            {
+                byte[] data = _bodyPoseDataQueue.Dequeue();
+                bodyPoseChannel.Send(data);
+            }
+
+            // If the buffer is full, wait for the next frame before checking again
+            if (bodyPoseChannel.BufferedAmount >= HIGH_WATER_MARK)
+            {
+                yield return null;
+            }
+        }
+    }
+
+    private byte[] SerializePoseData(BodyPoseProvider.PoseData poseData)
+    {
+        using (var memoryStream = new MemoryStream())
+        {
+            using (var writer = new BinaryWriter(memoryStream))
+            {
+                writer.Write(poseData.bones.Count);
+                foreach (var bone in poseData.bones)
+                {
+                    writer.Write(bone.position.x);
+                    writer.Write(bone.position.y);
+                    writer.Write(bone.position.z);
+                    
+                    writer.Write(bone.rotation.x);
+                    writer.Write(bone.rotation.y);
+                    writer.Write(bone.rotation.z);
+                    writer.Write(bone.rotation.w);
+                }
+            }
+            return memoryStream.ToArray();
+        }
     }
 
     private void SendOrientation()
