@@ -1141,3 +1141,219 @@ In short, the `I` prefix is a quick and clear signal to a programmer that they a
 > The BodyPoseProvider and BodyPoseLogger seem to fail silently; I do not see any relevant outputs in the Unity console, yet I can visually confirm that the character retargeting works. What do you think?
 
 > It seems like the error originates from a failed T-Pose initialization during startup - the CurrentPoseData never goes through the process of adding bones, and so the output is always an empty array. CharacterRetargeter has a fallback mechanism that allows recovering T-Pose afterwards, and it may employ a different data initialization tactic (maybe utilizing OVRSkeleton) so that the bones are added regardless.
+
+---
+
+This C\# script, `MetaSourceDataProvider`, acts as a bridge between the Meta Quest's body tracking system (`OVRBody`) and a character retargeting system. Its main job is to provide live skeleton pose data, a reference T-pose, and to check if this data is valid and ready to be used for animating a character model.
+
+-----
+
+## Script Purpose
+
+The `MetaSourceDataProvider` class is designed to be a reliable source of body tracking information for the Meta XR Movement SDK's retargeting feature. It inherits functionality from `OVRBody` to access the raw tracking data from the headset and controllers. It then processes this data, adds a layer of validation, and exposes it through the `ISourceDataProvider` interface to other systems that need to animate an avatar based on the user's movements.
+
+In short, it performs three key functions:
+
+1.  **Gets the user's current body pose** each frame.
+2.  **Gets the user's reference T-pose** when needed.
+3.  **Provides validity checks** to ensure the retargeting system doesn't use unstable or outdated data.
+
+-----
+
+## Validity Check Logic & Handling
+
+The script uses two distinct mechanisms to ensure the data is valid and consistent.
+
+### 1\. Initial Tracking Delay
+
+This check prevents the system from using tracking data the moment it becomes available, as it might be unstable or inaccurate during initialization.
+
+  * **Logic:**
+    1.  A configurable timer, `_validBodyTrackingTime`, starts when the script runs.
+    2.  In every frame, inside `GetSkeletonPose()`, the script fetches the latest pose data from the hardware. The OVR plugin provides an initial validity status.
+    3.  However, the script immediately overrides this status. It checks if `_currentValidBodyTrackingTime` is less than the specified `_validBodyTrackingDelay` (default is 0.25 seconds).
+    4.  If the timer has not yet reached the delay, the script forces the final validity flag, `_isValid`, to be `false`.
+  * **Handling:** By forcing `_isValid` to `false` for the first quarter-second, any other system calling `IsPoseValid()` will be told to ignore the pose. This gives the tracking system a brief "warm-up" period to stabilize, preventing jerky or incorrect avatar movements at the start.
+
+### 2\. Skeleton Definition Change
+
+This check detects when the underlying skeleton structure itself has changed, which requires the retargeting system to fetch a new reference T-pose. This is crucial if, for example, the tracking switches from upper-body to full-body.
+
+  * **Logic:**
+    1.  When `GetSkeletonPose()` is called, it receives an integer from the OVR plugin called `_currentSkeletalChangeCount`. This number increments whenever the SDK provides a new skeleton definition.
+    2.  The `IsNewTPoseAvailable()` method compares this current change count (`_currentSkeletalChangeCount`) with a stored value, `_skeletalChangedCount`.
+    3.  This stored value is only updated when the system explicitly asks for a new T-pose by calling `GetSkeletonTPose()`.
+  * **Handling:** If the two counts don't match, `IsNewTPoseAvailable()` returns `true`. This signals to the retargeting system that its existing T-pose is outdated. The retargeting system should then call `GetSkeletonTPose()` to get the new reference pose before it continues processing live poses. This ensures the avatar's proportions and joint locations correctly match the new tracking data.
+
+-----
+
+## Process Diagram
+
+This diagram illustrates the data and logic flow, focusing on how the validity checks are performed each frame.
+
+```mermaid
+graph TD
+    subgraph Each Frame
+        A[Start GetSkeletonPose] --> B{Get Raw Pose & Change Count from OVR};
+        B --> C{Timer < Delay?};
+        C -- Yes --> D[Set isValid = false];
+        C -- No --> E[isValid = true/false from OVR];
+        D --> F[Return Raw Pose];
+        E --> F;
+    end
+
+    subgraph Retargeting System
+        G[Call IsPoseValid] --> H{Check isValid flag};
+        I[Call IsNewTPoseAvailable] --> J{_currentSkeletalChangeCount != _skeletalChangedCount?};
+        J -- Yes --> K[Call GetSkeletonTPose];
+        J -- No --> L[Continue Retargeting];
+        K --> L;
+    end
+
+    style D fill:#f99,stroke:#333,stroke-width:2px
+    style J fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+---
+
+> I am building a script called `BodyPoseProvider` to extract body poses from the Meta Quest headset. It currently has an error where it seemingly always returns `inValid` when fetching body pose data, and after disabling the return guard, it seems to just output 0 for all poses. On the other hand, a reference implementation called `CharacterRetarger` works flawlessly. Please critique and analyze the main differences and weaknesses of the BodyPoseProvider script. 
+
+Of course. After analyzing the provided scripts, I've identified the primary issues with your `BodyPoseProvider` and the key differences compared to the working `CharacterRetargeter`.
+
+The fundamental flaw in `BodyPoseProvider` is the **order of operations** within its `Update` method. It checks for data validity *before* attempting to fetch the data for the current frame, leading to a logical dead end.
+
+-----
+
+### Core Weakness: Flawed Update Logic
+
+The main reason your script fails is how it interacts with the `MetaSourceDataProvider`.
+
+  * **`BodyPoseProvider` (Incorrect Logic):**
+
+    ```csharp
+    void Update()
+    {
+        // ... initialization ...
+
+        // 1. CHECKS for validity first.
+        if (!sourceDataProvider.IsPoseValid())
+        {
+            // 2. EXITS if not valid.
+            return;
+        }
+
+        // 3. TRIES to update pose (this code is never reached).
+        UpdatePoseData();
+    }
+    ```
+
+  * **`CharacterRetargeter` (Correct Logic):**
+
+    ```csharp
+    public virtual void Update()
+    {
+        // 1. FETCHES the pose data first.
+        // This call is crucial because it internally updates the provider's state, including the validity flag.
+        var sourcePose = _dataProvider.GetSkeletonPose();
+
+        // 2. CHECKS the now-current validity.
+        _isValid = _dataProvider.IsPoseValid();
+        if (!RetargeterValid)
+        {
+            // 3. EXITS if not valid.
+            return;
+        }
+
+        // 4. PROCESSES the valid pose data.
+        CalculatePose(sourcePose);
+    }
+    ```
+
+#### Why This Matters
+
+The `MetaSourceDataProvider.GetSkeletonPose()` method doesn't just return data; it's the function that actively polls the tracking system and **updates the internal `_isValid` flag** for the current frame.
+
+Your `BodyPoseProvider` calls `IsPoseValid()` before `GetSkeletonPose()`. Since `GetSkeletonPose()` was never called in the current `Update` cycle, `IsPoseValid()` returns a stale `false` value from the previous frame or its initial state. This creates a perpetual loop where your script checks for validity, finds it `false`, and exits the `Update` method without ever calling the one function that would make it `true`.
+
+When you disabled the guard, you started calling `GetSkeletonPose()`, but the underlying data was still marked as invalid (due to the initial `_validBodyTrackingDelay` and other factors), causing the provider to return a default or zeroed-out pose array.
+
+-----
+
+### Other Key Differences and Weaknesses
+
+1.  **Lifecycle and Initialization:**
+
+      * **`CharacterRetargeter`:** Uses a robust lifecycle with `Setup`, `Calibrate`, and `Dispose`. It actively manages the state of the retargeting system, handles T-pose updates (`IsNewTPoseAvailable`), and re-calibrates when the skeleton definition changes.
+      * **`BodyPoseProvider`:** Your script's initialization is simpler but more brittle. It tries to initialize once and gives up for the frame if it fails. The check for bone count mismatch triggering a re-initialization is a good idea but doesn't solve the core data fetching issue.
+
+2.  **Performance and Data Handling:**
+
+      * **`CharacterRetargeter`:** Leverages the Unity Job System by working with `NativeArray<NativeTransform>`. It schedules jobs (`ConvertWorldToLocalPoseJob`, `ApplyPoseJob`) to perform heavy computations off the main thread, which is significantly more performant.
+      * **`BodyPoseProvider`:** Performs all operations on the main thread. It copies data from a `NativeArray` into a managed `List<BoneData>`, which involves more overhead and potential garbage collection pressure, especially since `BoneData` is a struct being copied in and out of the list.
+
+3.  **Data Processing:**
+
+      * **`CharacterRetargeter`:** This is a complex system that does more than just fetch data. It runs "processors" (`SourceProcessorContainer`, `TargetProcessorContainer`) to clean up, align, and modify the raw tracking data before applying it. It also converts poses from world to local space.
+      * **`BodyPoseProvider`:** Your script is much simpler, acting only as a pass-through for the raw world-space pose data from the provider. This is fine for its purpose, but it lacks the sophisticated processing of the reference implementation.
+
+-----
+
+### How to Fix `BodyPoseProvider`
+
+To fix your script, you must adopt the "fetch-then-check" pattern from `CharacterRetargeter`.
+
+Here is the corrected `Update` method for `BodyPoseProvider`:
+
+```csharp
+void Update()
+{
+    // 1. Handle initialization if not done yet.
+    if (!_isInitialized)
+    {
+        InitializePoseData();
+        if (!_isInitialized) { return; } // Exit if initialization fails
+    }
+
+    // 2. FETCH the skeleton pose first. This is the most important change.
+    var skeletonPose = sourceDataProvider.GetSkeletonPose();
+
+    // 3. NOW check for validity. The flag has been updated by the call above.
+    if (!sourceDataProvider.IsPoseValid())
+    {
+        Debug.LogWarning("BodyPoseProvider: Body pose is invalid. Waiting for valid data.");
+        return; // It's now safe to return, as you've already attempted the fetch.
+    }
+
+    // 4. If valid, update your internal data structure.
+    // The UpdatePoseData method needs to be modified to accept the fetched pose.
+    UpdatePoseData(skeletonPose);
+
+    // 5. Invoke the event with the fresh data.
+    OnPoseUpdated?.Invoke(CurrentPoseData);
+}
+
+// Modify UpdatePoseData to take the pose as an argument
+private void UpdatePoseData(NativeArray<MSDKUtility.NativeTransform> skeletonPose)
+{
+    CurrentPoseData.timestamp = Time.time;
+
+    if (skeletonPose.IsCreated && skeletonPose.Length == CurrentPoseData.bones.Count)
+    {
+        for (int i = 0; i < skeletonPose.Length; i++)
+        {
+            // This is safe because BoneData is a struct, but it's inefficient.
+            // A more optimal way would be to work with an array of structs directly.
+            BoneData boneData = CurrentPoseData.bones[i];
+            boneData.position = skeletonPose[i].Position;
+            boneData.rotation = skeletonPose[i].Orientation;
+            CurrentPoseData.bones[i] = boneData;
+        }
+    }
+    else if (skeletonPose.IsCreated && skeletonPose.Length != CurrentPoseData.bones.Count)
+    {
+        Debug.LogWarning($"BodyPoseProvider: Mismatch in bone count. Expected {CurrentPoseData.bones.Count}, got {skeletonPose.Length}. Re-initializing.");
+        _isInitialized = false; // Trigger re-initialization on the next frame.
+    }
+}
+```

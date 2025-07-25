@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Meta.XR.Movement.Retargeting;
+using static Meta.XR.Movement.MSDKUtility;
 
 public class BodyPoseProvider : MonoBehaviour
 {
@@ -76,33 +78,31 @@ public class BodyPoseProvider : MonoBehaviour
 
     void Update()
     {
+        // 1. Handle initialization if not done yet.
         if (!_isInitialized)
         {
-            // Attempt to initialize PoseData every frame until successful
             InitializePoseData();
-            if (!_isInitialized) // If still not initialized, return early
-            {
-                return;
-            }
+            if (!_isInitialized) { return; } // Exit if initialization fails
         }
 
+        // 2. FETCH the skeleton pose first. This is the most important change.
+        var skeletonPose = sourceDataProvider.GetSkeletonPose();
+
+        // 3. NOW check for validity. The flag has been updated by the call above.
         if (!sourceDataProvider.IsPoseValid())
         {
-            Debug.LogWarning("BodyPoseProvider: Body pose is invalid. However, using it regardless.");
-            // Debug.LogWarning("BodyPoseProvider: Body pose is invalid. Waiting for valid data.");
-            // return;  // TEMPDEACEAC
-            // NOTE (yunho-c): I'm not sure why, but MetaSourceDataProvider seems to always return false for .IsPoseValid().
-            //       Maybe because of its (weird?) temporal component and how both character retargeter & BodyPoseProvider use it.
-            //       Or maybe due to the way BodyPoseProvider uses a different lifecycle hook &|| doesn't perform trasnfromation computations.
-            //       Either way, this seems to be the primary reason behind silent body pose tracking failure. Thus, I'm deactivating the return guard.
-            //       It is possible that a modification of the `ValidBodyPoseTrackingDelay` is the intended/correct way to fix this. 
-            //       I'm just not quite sure how the validitiy decision is done and whether it causes continually persisting body pose fetch failure
-            //       via `GetSkeletonPose`, but it certainly seems like the most likely cause. 
+            Debug.LogWarning("BodyPoseProvider: Body pose is invalid. Waiting for valid data.");
+            return; // It's now safe to return, as you've already attempted the fetch.
         }
 
-        UpdatePoseData();
+        // 4. If valid, update your internal data structure.
+        // The UpdatePoseData method needs to be modified to accept the fetched pose.
+        UpdatePoseData(skeletonPose);
+
+        // 5. Invoke the event with the fresh data.
         OnPoseUpdated?.Invoke(CurrentPoseData);
     }
+
     #endregion
 
     #region Private Methods
@@ -156,14 +156,16 @@ public class BodyPoseProvider : MonoBehaviour
         }
     }
 
-    private void UpdatePoseData()
+    private void UpdatePoseData(NativeArray<NativeTransform> skeletonPose)
     {
         CurrentPoseData.timestamp = Time.time;
-        var skeletonPose = sourceDataProvider.GetSkeletonPose();
+
         if (skeletonPose.IsCreated && skeletonPose.Length == CurrentPoseData.bones.Count)
         {
             for (int i = 0; i < skeletonPose.Length; i++)
             {
+                // This is safe because BoneData is a struct, but it's inefficient.
+                // A more optimal way would be to work with an array of structs directly.
                 BoneData boneData = CurrentPoseData.bones[i];
                 boneData.position = skeletonPose[i].Position;
                 boneData.rotation = skeletonPose[i].Orientation;
@@ -172,8 +174,8 @@ public class BodyPoseProvider : MonoBehaviour
         }
         else if (skeletonPose.IsCreated && skeletonPose.Length != CurrentPoseData.bones.Count)
         {
-            Debug.LogWarning($"BodyPoseProvider: Mismatch in bone count. Expected {CurrentPoseData.bones.Count}, got {skeletonPose.Length}. Re-initializing PoseData.");
-            _isInitialized = false;
+            Debug.LogWarning($"BodyPoseProvider: Mismatch in bone count. Expected {CurrentPoseData.bones.Count}, got {skeletonPose.Length}. Re-initializing.");
+            _isInitialized = false; // Trigger re-initialization on the next frame.
         }
     }
     #endregion
