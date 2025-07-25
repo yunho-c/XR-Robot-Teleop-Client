@@ -22,7 +22,7 @@ public class OrientationState
 public class WebRTCController : MonoBehaviour
 {
     [Header("Signaling Server")]
-    [Tooltip("URL of the signaling server")]
+    [Tooltip("Default URL of signaling server (overriden by PlayerPrefs)")]
     public string serverUrl = "http://localhost:8080/offer";
 
     [Header("VR Camera")]
@@ -41,6 +41,8 @@ public class WebRTCController : MonoBehaviour
     [SerializeField] private TMP_InputField ipAddressInputField;
 
     [Header("WebRTC Settings")]
+    [Tooltip("Enable to automatically start the WebRTC connection on start")]
+    public bool autoStartConnection = false;
     [Tooltip("Enable to receive video stream")]
     public bool receiveVideo = true;
     private const ulong HIGH_WATER_MARK = 16 * 1024 * 1024; // 16 MB
@@ -75,6 +77,11 @@ public class WebRTCController : MonoBehaviour
                     Debug.LogError("Error parsing server URL: " + e.Message);
                 }
             }
+        }
+
+        if (autoStartConnection)
+        {
+            StartConnection();
         }
     }
 
@@ -400,7 +407,7 @@ public class WebRTCController : MonoBehaviour
                     writer.Write(bone.position.x);
                     writer.Write(bone.position.y);
                     writer.Write(bone.position.z);
-                    
+
                     writer.Write(bone.rotation.x);
                     writer.Write(bone.rotation.y);
                     writer.Write(bone.rotation.z);
