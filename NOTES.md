@@ -1137,3 +1137,7 @@ In short, the `I` prefix is a quick and clear signal to a programmer that they a
    2. You will need to understand the NativeTransform struct and how to serialize it for sending over the network.
    3. You will likely need to create a new script that gets the MetaSourceDataProvider component and calls GetSkeletonPose() in its Update() loop. Then, you can format and send this data.
 ```
+
+> The BodyPoseProvider and BodyPoseLogger seem to fail silently; I do not see any relevant outputs in the Unity console, yet I can visually confirm that the character retargeting works. What do you think?
+
+> It seems like the error originates from a failed T-Pose initialization during startup - the CurrentPoseData never goes through the process of adding bones, and so the output is always an empty array. CharacterRetargeter has a fallback mechanism that allows recovering T-Pose afterwards, and it may employ a different data initialization tactic (maybe utilizing OVRSkeleton) so that the bones are added regardless.

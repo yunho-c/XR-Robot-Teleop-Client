@@ -76,10 +76,28 @@ public class BodyPoseProvider : MonoBehaviour
 
     void Update()
     {
+        if (!_isInitialized)
+        {
+            // Attempt to initialize PoseData every frame until successful
+            InitializePoseData();
+            if (!_isInitialized) // If still not initialized, return early
+            {
+                return;
+            }
+        }
+
         if (!sourceDataProvider.IsPoseValid())
         {
-            InitializePoseData();
-            _isInitialized = true;
+            Debug.LogWarning("BodyPoseProvider: Body pose is invalid. However, using it regardless.");
+            // Debug.LogWarning("BodyPoseProvider: Body pose is invalid. Waiting for valid data.");
+            // return;  // TEMPDEACEAC
+            // NOTE (yunho-c): I'm not sure why, but MetaSourceDataProvider seems to always return false for .IsPoseValid().
+            //       Maybe because of its (weird?) temporal component and how both character retargeter & BodyPoseProvider use it.
+            //       Or maybe due to the way BodyPoseProvider uses a different lifecycle hook &|| doesn't perform trasnfromation computations.
+            //       Either way, this seems to be the primary reason behind silent body pose tracking failure. Thus, I'm deactivating the return guard.
+            //       It is possible that a modification of the `ValidBodyPoseTrackingDelay` is the intended/correct way to fix this. 
+            //       I'm just not quite sure how the validitiy decision is done and whether it causes continually persisting body pose fetch failure
+            //       via `GetSkeletonPose`, but it certainly seems like the most likely cause. 
         }
 
         UpdatePoseData();
@@ -92,18 +110,49 @@ public class BodyPoseProvider : MonoBehaviour
     {
         Debug.Log("BodyPoseProvider: Initializing PoseData");
         CurrentPoseData = new PoseData();
-        var tPose = sourceDataProvider.GetSkeletonTPose();
-        if (tPose.IsCreated && tPose.Length > 0)
+
+        // Determine the skeleton type from the source data provider
+        // Assuming MetaSourceDataProvider is the concrete type
+        MetaSourceDataProvider metaSource = sourceDataProvider as MetaSourceDataProvider;
+        if (metaSource == null)
         {
-            for (int i = 0; i < tPose.Length; i++)
-            {
-                CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
-            }
-            Debug.Log($"BodyPoseProvider: PoseData initialized with {tPose.Length} bones.");
+            Debug.LogError("BodyPoseProvider: Source data provider is not MetaSourceDataProvider. Cannot determine skeleton type.");
+            return;
+        }
+
+        // Use the provided skeleton type to get the correct bone range
+        OVRSkeleton.BoneId startBoneId;
+        OVRSkeleton.BoneId endBoneId;
+
+        // This logic needs to be robust. We'll assume Body or FullBody for now.
+        // You might need to refine this based on the actual OVRPlugin.BodyJointSet values.
+        if (metaSource.ProvidedSkeletonType == OVRPlugin.BodyJointSet.FullBody)
+        {
+            startBoneId = OVRSkeleton.BoneId.FullBody_Start;
+            endBoneId = OVRSkeleton.BoneId.FullBody_End;
+            Debug.Log("BodyPoseProvider: Detected FullBody skeleton type.");
+        }
+        else // Default to Body (UpperBody) if not FullBody
+        {
+            startBoneId = OVRSkeleton.BoneId.Body_Start;
+            endBoneId = OVRSkeleton.BoneId.Body_End;
+            Debug.Log("BodyPoseProvider: Detected Body (UpperBody) skeleton type.");
+        }
+
+        // Populate bones list with all possible bone IDs for the detected skeleton type
+        for (int i = (int)startBoneId; i < (int)endBoneId; i++)
+        {
+            CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
+        }
+
+        if (CurrentPoseData.bones.Count > 0)
+        {
+            _isInitialized = true;
+            Debug.Log($"BodyPoseProvider: PoseData initialized with {CurrentPoseData.bones.Count} bones.");
         }
         else
         {
-            Debug.LogError("BodyPoseProvider: Failed to get a valid T-Pose during initialization.");
+            Debug.LogError("BodyPoseProvider: Failed to initialize PoseData. No bones added.");
         }
     }
 
@@ -121,7 +170,11 @@ public class BodyPoseProvider : MonoBehaviour
                 CurrentPoseData.bones[i] = boneData;
             }
         }
+        else if (skeletonPose.IsCreated && skeletonPose.Length != CurrentPoseData.bones.Count)
+        {
+            Debug.LogWarning($"BodyPoseProvider: Mismatch in bone count. Expected {CurrentPoseData.bones.Count}, got {skeletonPose.Length}. Re-initializing PoseData.");
+            _isInitialized = false;
+        }
     }
     #endregion
 }
-
