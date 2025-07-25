@@ -37,6 +37,7 @@ public class WebRTCController : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private RawImage videoImage;
+    [SerializeField] private TMP_InputField ipAddressInputField;
 
     [Header("WebRTC Settings")]
     [Tooltip("Enable to receive video stream")]
@@ -48,8 +49,45 @@ public class WebRTCController : MonoBehaviour
 
     void Start()
     {
-        statusText.text = "Starting WebRTC...";
-        StartCoroutine(StartWebRTC());
+        serverUrl = PlayerPrefs.GetString("serverUrl", serverUrl);
+        statusText.text = "Ready to connect.";
+
+        if (ipAddressInputField != null)
+        {
+            if (!string.IsNullOrEmpty(serverUrl))
+            {
+                // Extract IP address from the server URL
+                try
+                {
+                    System.Uri uri = new System.Uri(serverUrl);
+                    ipAddressInputField.text = uri.Host;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("Error parsing server URL: " + e.Message);
+                }
+            }
+        }
+    }
+
+    void OnEnable()
+    {
+        // #if UNITY_ANDROID
+        if (bodyPoseProvider != null)
+        {
+            bodyPoseProvider.OnPoseUpdated += OnBodyPoseUpdated;
+        }
+        // #endif
+    }
+
+    void OnDisable()
+    {
+        // #if UNITY_ANDROID
+        if (bodyPoseProvider != null)
+        {
+            bodyPoseProvider.OnPoseUpdated -= OnBodyPoseUpdated;
+        }
+        // #endif
     }
 
     void Update()
@@ -58,22 +96,71 @@ public class WebRTCController : MonoBehaviour
         {
             SendOrientation();
         }
+    }
 
-        // #if UNITY_ANDROID
-        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open && bodyPoseProvider != null)
+    public void SetServerIp(string ipAddress)
+    {
+        serverUrl = "http://" + ipAddress + ":8080/offer";
+        PlayerPrefs.SetString("serverUrl", serverUrl);
+        PlayerPrefs.Save();
+        statusText.text = $"Server URL set to: {serverUrl}";
+        Debug.Log("Server URL set to: " + serverUrl);
+    }
+
+    public void StartConnection()
+    {
+        if (pc != null && (pc.ConnectionState == RTCPeerConnectionState.Connected || pc.ConnectionState == RTCPeerConnectionState.Connecting))
         {
-            SendBodyPoseData();
+            Debug.LogWarning("WebRTC connection is already active or connecting.");
+            return;
         }
-        // #endif
+        statusText.text = "Starting WebRTC...";
+        StartCoroutine(StartWebRTC());
+    }
+
+    public void StopConnection()
+    {
+        if (cameraChannel != null)
+        {
+            cameraChannel.Close();
+            cameraChannel = null;
+        }
+        if (bodyPoseChannel != null)
+        {
+            bodyPoseChannel.Close();
+            bodyPoseChannel = null;
+        }
+        if (pc != null)
+        {
+            pc.Close();
+            pc = null;
+        }
+        statusText.text = "Disconnected.";
+        Debug.Log("WebRTC connection closed.");
+    }
+
+    public void ToggleConnection(bool isOn)
+    {
+        if (isOn)
+        {
+            StartConnection();
+        }
+        else
+        {
+            StopConnection();
+        }
     }
 
     // #if UNITY_ANDROID
-    private void SendBodyPoseData()
+    private void OnBodyPoseUpdated(BodyPoseProvider.PoseData poseData)
     {
-        if (bodyPoseProvider.CurrentPoseData.bones != null && bodyPoseProvider.CurrentPoseData.bones.Count > 0)
+        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open)
         {
-            string jsonPose = JsonUtility.ToJson(bodyPoseProvider.CurrentPoseData);
-            bodyPoseChannel.Send(jsonPose);
+            if (poseData.bones != null && poseData.bones.Count > 0)
+            {
+                string jsonPose = JsonUtility.ToJson(poseData);
+                bodyPoseChannel.Send(jsonPose);
+            }
         }
     }
     // #endif
@@ -118,7 +205,7 @@ public class WebRTCController : MonoBehaviour
         }
 
         // Send offer to server
-        statusText.text = "Sending offer...";
+        statusText.text = $"Sending offer to {serverUrl}...";
         SignalingMessage offerMessage = new SignalingMessage { type = "offer", sdp = desc.sdp };
         string jsonOffer = JsonUtility.ToJson(offerMessage);
 
@@ -134,7 +221,7 @@ public class WebRTCController : MonoBehaviour
             if (www.result != UnityWebRequest.Result.Success)
             {
                 Debug.LogError("Error sending offer: " + www.error);
-                statusText.text = "Error sending offer.";
+                statusText.text = $"Error sending offer: {www.error}";
                 yield break;
             }
 
@@ -255,9 +342,9 @@ public class WebRTCController : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        if (cameraChannel != null) cameraChannel.Close();
-        if (bodyPoseChannel != null) bodyPoseChannel.Close();
-        if (pc != null) pc.Close();
+        PlayerPrefs.SetString("serverUrl", serverUrl);
+        PlayerPrefs.Save();
+        StopConnection();
     }
 
     private static RTCConfiguration GetSelectedSdpSemantics()

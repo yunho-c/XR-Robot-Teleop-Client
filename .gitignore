@@ -64,6 +64,9 @@ Temporary Items
 # Temporary Files
 .utmp
 
+# Meta XR
+MetaQuestTrackTest_BurstDebugInformation_DoNotShip
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/

@@ -1,6 +1,10 @@
-using UnityEngine;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using Unity.Collections;
+using UnityEngine;
+using UnityEngine.Assertions;
+using Meta.XR.Movement.Retargeting;
+using static Meta.XR.Movement.MSDKUtility;
 
 public class BodyPoseProvider : MonoBehaviour
 {
@@ -29,8 +33,8 @@ public class BodyPoseProvider : MonoBehaviour
     #endregion
 
     #region Public Fields
-    [Tooltip("The OVRSkeleton component that provides the raw tracking data.")]
-    public OVRSkeleton skeleton;
+    // [Tooltip("The MetaSourceDataProvider component that provides the raw tracking data.")]
+    // public MetaSourceDataProvider sourceDataProvider;
     #endregion
 
     #region Public Properties
@@ -40,58 +44,138 @@ public class BodyPoseProvider : MonoBehaviour
     public PoseData CurrentPoseData { get; private set; }
     #endregion
 
+    #region Private Fields
+    private ISourceDataProvider sourceDataProvider;
+    private bool _isInitialized = false;
+    #endregion
+
     #region Events
     /// <summary>
-    /// Event that is invoked every LateUpdate with the latest tracking data.
+    /// Event that is invoked every Update with the latest tracking data.
     /// Other scripts can subscribe to this to receive pose updates.
     /// </summary>
     public event Action<PoseData> OnPoseUpdated;
     #endregion
 
     #region Unity Methods
+    void Awake()
+    {
+        Debug.Log("BodyPoseProvider: Awake()");
+        sourceDataProvider = gameObject.GetComponent<ISourceDataProvider>();
+        Assert.IsNotNull(sourceDataProvider, "BodyPoseProvider: ISourceDataProvider not found on this GameObject.");
+    }
+
     void Start()
     {
-        if (skeleton == null)
+        Debug.Log("BodyPoseProvider: Start()");
+        if (sourceDataProvider == null)
         {
-            Debug.LogError("OVRSkeleton not assigned to BodyPoseProvider. Disabling script.");
+            Debug.LogError("BodyPoseProvider: sourceDataProvider is null. Disabling script.");
             this.enabled = false;
             return;
         }
-        InitializePoseData();
     }
-    
-    void LateUpdate()
+
+    void Update()
     {
-        if (!skeleton.IsInitialized || skeleton.Bones == null || skeleton.Bones.Count == 0 || skeleton.Bones.Count != CurrentPoseData.bones.Count)
+        // 1. Handle initialization if not done yet.
+        if (!_isInitialized)
         {
-            return;
+            InitializePoseData();
+            if (!_isInitialized) { return; } // Exit if initialization fails
         }
-        
-        UpdatePoseData();
+
+        // 2. FETCH the skeleton pose first. This is the most important change.
+        var skeletonPose = sourceDataProvider.GetSkeletonPose();
+
+        // 3. NOW check for validity. The flag has been updated by the call above.
+        if (!sourceDataProvider.IsPoseValid())
+        {
+            Debug.LogWarning("BodyPoseProvider: Body pose is invalid. Waiting for valid data.");
+            return; // It's now safe to return, as you've already attempted the fetch.
+        }
+
+        // 4. If valid, update your internal data structure.
+        // The UpdatePoseData method needs to be modified to accept the fetched pose.
+        UpdatePoseData(skeletonPose);
+
+        // 5. Invoke the event with the fresh data.
         OnPoseUpdated?.Invoke(CurrentPoseData);
     }
+
     #endregion
 
     #region Private Methods
     private void InitializePoseData()
     {
+        Debug.Log("BodyPoseProvider: Initializing PoseData");
         CurrentPoseData = new PoseData();
-        // Pre-populate the list to the exact size needed.
-        for (int i = 0; i < skeleton.Bones.Count; i++)
+
+        // Determine the skeleton type from the source data provider
+        // Assuming MetaSourceDataProvider is the concrete type
+        MetaSourceDataProvider metaSource = sourceDataProvider as MetaSourceDataProvider;
+        if (metaSource == null)
         {
-            // We only need to set the Id once. Position and rotation will be updated each frame.
-            CurrentPoseData.bones.Add(new BoneData { id = skeleton.Bones[i].Id });
+            Debug.LogError("BodyPoseProvider: Source data provider is not MetaSourceDataProvider. Cannot determine skeleton type.");
+            return;
+        }
+
+        // Use the provided skeleton type to get the correct bone range
+        OVRSkeleton.BoneId startBoneId;
+        OVRSkeleton.BoneId endBoneId;
+
+        // This logic needs to be robust. We'll assume Body or FullBody for now.
+        // You might need to refine this based on the actual OVRPlugin.BodyJointSet values.
+        if (metaSource.ProvidedSkeletonType == OVRPlugin.BodyJointSet.FullBody)
+        {
+            startBoneId = OVRSkeleton.BoneId.FullBody_Start;
+            endBoneId = OVRSkeleton.BoneId.FullBody_End;
+            Debug.Log("BodyPoseProvider: Detected FullBody skeleton type.");
+        }
+        else // Default to Body (UpperBody) if not FullBody
+        {
+            startBoneId = OVRSkeleton.BoneId.Body_Start;
+            endBoneId = OVRSkeleton.BoneId.Body_End;
+            Debug.Log("BodyPoseProvider: Detected Body (UpperBody) skeleton type.");
+        }
+
+        // Populate bones list with all possible bone IDs for the detected skeleton type
+        for (int i = (int)startBoneId; i < (int)endBoneId; i++)
+        {
+            CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
+        }
+
+        if (CurrentPoseData.bones.Count > 0)
+        {
+            _isInitialized = true;
+            Debug.Log($"BodyPoseProvider: PoseData initialized with {CurrentPoseData.bones.Count} bones.");
+        }
+        else
+        {
+            Debug.LogError("BodyPoseProvider: Failed to initialize PoseData. No bones added.");
         }
     }
-    private void UpdatePoseData()
+
+    private void UpdatePoseData(NativeArray<NativeTransform> skeletonPose)
     {
         CurrentPoseData.timestamp = Time.time;
-        for (int i = 0; i < skeleton.Bones.Count; i++)
+
+        if (skeletonPose.IsCreated && skeletonPose.Length == CurrentPoseData.bones.Count)
         {
-            BoneData boneData = CurrentPoseData.bones[i];
-            boneData.position = skeleton.Bones[i].Transform.position;
-            boneData.rotation = skeleton.Bones[i].Transform.rotation;
-            CurrentPoseData.bones[i] = boneData; // Re-assign the struct to the list
+            for (int i = 0; i < skeletonPose.Length; i++)
+            {
+                // This is safe because BoneData is a struct, but it's inefficient.
+                // A more optimal way would be to work with an array of structs directly.
+                BoneData boneData = CurrentPoseData.bones[i];
+                boneData.position = skeletonPose[i].Position;
+                boneData.rotation = skeletonPose[i].Orientation;
+                CurrentPoseData.bones[i] = boneData;
+            }
+        }
+        else if (skeletonPose.IsCreated && skeletonPose.Length != CurrentPoseData.bones.Count)
+        {
+            Debug.LogWarning($"BodyPoseProvider: Mismatch in bone count. Expected {CurrentPoseData.bones.Count}, got {skeletonPose.Length}. Re-initializing.");
+            _isInitialized = false; // Trigger re-initialization on the next frame.
         }
     }
     #endregion

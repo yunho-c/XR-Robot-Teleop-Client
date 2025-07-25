@@ -6,7 +6,7 @@ using System.Text;
 /// This component should be placed on the same GameObject as the BodyPoseProvider.
 /// </summary>
 [RequireComponent(typeof(BodyPoseProvider))]
-public class PoseLogger : MonoBehaviour
+public class BodyPoseLogger : MonoBehaviour
 {
     #region Public Fields
     [Tooltip("If true, logs the data as a JSON string. Otherwise, logs a simple, human-readable format.")]
@@ -86,11 +86,6 @@ public class PoseLogger : MonoBehaviour
         Debug.Log(json);
     }
 
-    /// <summary>
-    /// Logs the pose data to the console as a formatted, multi-line string for human readability.
-    /// This method reuses a StringBuilder to minimize garbage collection.
-    /// </summary>
-    /// <param name="poseData">The pose data to format and log.</param>
     /// <summary>
     /// Logs the pose data to the console as a formatted, multi-line string for human readability.
     /// This method reuses a StringBuilder to minimize garbage collection.
