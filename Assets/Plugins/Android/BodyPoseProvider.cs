@@ -44,6 +44,7 @@ public class BodyPoseProvider : MonoBehaviour
 
     #region Private Fields
     private ISourceDataProvider sourceDataProvider;
+    private bool _isInitialized = false;
     #endregion
 
     #region Events
@@ -57,27 +58,28 @@ public class BodyPoseProvider : MonoBehaviour
     #region Unity Methods
     void Awake()
     {
+        Debug.Log("BodyPoseProvider: Awake()");
         sourceDataProvider = gameObject.GetComponent<ISourceDataProvider>();
-        Assert.IsNotNull(sourceDataProvider, "Must have a skeleton data provider.");
+        Assert.IsNotNull(sourceDataProvider, "BodyPoseProvider: ISourceDataProvider not found on this GameObject.");
     }
 
     void Start()
     {
+        Debug.Log("BodyPoseProvider: Start()");
         if (sourceDataProvider == null)
         {
-            Debug.LogError("MetaSourceDataProvider not assigned to BodyPoseProvider. Disabling script.");
+            Debug.LogError("BodyPoseProvider: sourceDataProvider is null. Disabling script.");
             this.enabled = false;
             return;
         }
-        InitializePoseData();
     }
 
     void Update()
     {
         if (!sourceDataProvider.IsPoseValid())
         {
-            Debug.Log("Body pose is invalid. Ignoring.");
-            return;
+            InitializePoseData();
+            _isInitialized = true;
         }
 
         UpdatePoseData();
@@ -88,11 +90,20 @@ public class BodyPoseProvider : MonoBehaviour
     #region Private Methods
     private void InitializePoseData()
     {
+        Debug.Log("BodyPoseProvider: Initializing PoseData");
         CurrentPoseData = new PoseData();
         var tPose = sourceDataProvider.GetSkeletonTPose();
-        for (int i = 0; i < tPose.Length; i++)
+        if (tPose.IsCreated && tPose.Length > 0)
         {
-            CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
+            for (int i = 0; i < tPose.Length; i++)
+            {
+                CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
+            }
+            Debug.Log($"BodyPoseProvider: PoseData initialized with {tPose.Length} bones.");
+        }
+        else
+        {
+            Debug.LogError("BodyPoseProvider: Failed to get a valid T-Pose during initialization.");
         }
     }
 
@@ -100,13 +111,17 @@ public class BodyPoseProvider : MonoBehaviour
     {
         CurrentPoseData.timestamp = Time.time;
         var skeletonPose = sourceDataProvider.GetSkeletonPose();
-        for (int i = 0; i < skeletonPose.Length; i++)
+        if (skeletonPose.IsCreated && skeletonPose.Length == CurrentPoseData.bones.Count)
         {
-            BoneData boneData = CurrentPoseData.bones[i];
-            boneData.position = skeletonPose[i].Position;
-            boneData.rotation = skeletonPose[i].Orientation;
-            CurrentPoseData.bones[i] = boneData; // Re-assign the struct to the list
+            for (int i = 0; i < skeletonPose.Length; i++)
+            {
+                BoneData boneData = CurrentPoseData.bones[i];
+                boneData.position = skeletonPose[i].Position;
+                boneData.rotation = skeletonPose[i].Orientation;
+                CurrentPoseData.bones[i] = boneData;
+            }
         }
     }
     #endregion
 }
+

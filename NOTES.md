@@ -1110,3 +1110,30 @@ In short, the `I` prefix is a quick and clear signal to a programmer that they a
 
   For its intended purpose as a simple data forwarder, it's a reasonable start, but it would need to be fixed and made more robust to be used reliably in a complex application.
 ```
+
+```
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > Would you recommend using @References\MetaSourceDataProvider.cs or @References\OVRSkeleton.cs, if my goal is to log the body pose of the user and send it to a separate PC?  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ After reviewing the files, here's my recommendation:
+
+  You should primarily focus on `MetaSourceDataProvider.cs`.
+
+  Here's a breakdown of why:
+
+   * `MetaSourceDataProvider.cs`: This class is the most direct source of body tracking data. It inherits from OVRBody and implements the ISourceDataProvider interface. Crucially, it has the GetSkeletonPose() method, which returns a NativeArray<NativeTransform>. This is the raw pose data you
+     want to capture and send. It also has GetSkeletonTPose() for the reference pose.
+
+   * `OVRSkeleton.cs`: This class is more about the visual representation of the skeleton. It takes skeleton data from a provider (like MetaSourceDataProvider) and applies it to the OVRBone transforms in the scene. While it holds the pose data, it gets it from a data provider. It would be less
+     efficient to read the data from here, as you'd be reading it after it has already been processed and applied to the scene objects.
+
+   * `CharacterRetargeter.cs`: This script is for retargeting the captured motion onto a different character model. It takes the data from an ISourceDataProvider (which would be MetaSourceDataProvider in this case) and performs complex calculations to adapt the motion. This is an unnecessary
+     layer of complexity for your goal of simply logging and sending the raw data.
+
+  In summary:
+
+   1. `MetaSourceDataProvider.cs` is your starting point. It will give you the raw skeleton data.
+   2. You will need to understand the NativeTransform struct and how to serialize it for sending over the network.
+   3. You will likely need to create a new script that gets the MetaSourceDataProvider component and calls GetSkeletonPose() in its Update() loop. Then, you can format and send this data.
+```

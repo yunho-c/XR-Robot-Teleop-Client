@@ -95,7 +95,7 @@ public class BodyPoseLogger : MonoBehaviour
     {
         // Clear the pre-allocated StringBuilder to reuse its memory.
         _stringBuilder.Clear();
-        _stringBuilder.AppendLine($"--- Body Pose Data Frame (Timestamp: {poseData.timestamp:F2}) ---");
+        // _stringBuilder.AppendLine($"--- Body Pose Data Frame (Timestamp: {poseData.timestamp:F2}) ---");  // NOTE: disabled to allow log collapsing
 
         foreach (var boneData in poseData.bones)
         {
