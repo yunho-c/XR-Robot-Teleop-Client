@@ -404,6 +404,8 @@ public class WebRTCController : MonoBehaviour
                 writer.Write(poseData.bones.Count);
                 foreach (var bone in poseData.bones)
                 {
+                    writer.Write((int)bone.id);
+
                     writer.Write(bone.position.x);
                     writer.Write(bone.position.y);
                     writer.Write(bone.position.z);
