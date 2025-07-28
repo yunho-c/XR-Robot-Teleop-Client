@@ -1785,3 +1785,128 @@ The logic is a perfect mirror. The data types, order, and endianness (`little-en
 The implementation is correct and should work as expected. I've also confirmed that the `rerun` logging in the Python script is correctly adapted to the new `Bone` object structure, using the bone's index as its ID and correctly accessing the `bone.position` tuple.
 
 Since the code is verified and no changes are needed, I will mark the task as complete.
+
+---
+---
+
+Excellent questions. This is where the high-level architecture meets the low-level reality of the network stack. Let's clear this up, as it's one of the most common points of confusion when implementing real-time systems on WebRTC.
+
+### The Golden Rule: Sender Polls, Receiver Listens
+
+First, to answer your core question directly:
+
+  * **The Sender (Unity) polls its *own* data source (the tracking system) at a fixed rate.**
+  * **The Receiver (Python) does *not* poll the sender.** The receiver is passive; it simply processes data as soon as it arrives.
+
+A request/response pattern where the receiver polls the sender for data would be disastrous for latency. It would add a full network round-trip-time (RTT) to every single update. You want a "fire-and-forget" stream from sender to receiver.
+
+-----
+
+### How to Achieve This in WebRTC
+
+WebRTC is perfectly designed for this, but you have to configure it correctly. It provides sophisticated, built-in mechanisms for flow control that are far better than anything you would build manually.
+
+Here’s how it works and how you should implement it.
+
+#### 1\. The Sender-Side Polling Loop (Unity/C\#)
+
+Your polling logic in Unity remains the same, but with one crucial addition: **you must check WebRTC's backpressure before sending.**
+
+WebRTC exposes a property on the data channel called `BufferedAmount`. This tells you how many bytes of data you have told WebRTC to send that have *not yet been sent over the network*. It's a queue size.
+
+If this number gets too high, it means you are producing data faster than the network can handle it. You should stop sending temporarily to let the buffer drain. This is the **built-in flow control**.
+
+Here is the conceptual code for your Unity sender:
+
+```csharp
+public class PoseSender : MonoBehaviour
+{
+    private RTCDataChannel bodyPoseChannel;
+    private float sendInterval = 1.0f / 100.0f; // 100 Hz
+    private float timeSinceLastSend = 0f;
+
+    // Set a "High Water Mark". If the buffer exceeds this, we pause sending.
+    // 1MB is a reasonable starting point. You can tune this.
+    private const ulong HIGH_WATER_MARK = 1024 * 1024;
+
+    void Update()
+    {
+        timeSinceLastSend += Time.deltaTime;
+
+        // Check if it's time to send the next packet
+        if (timeSinceLastSend >= sendInterval)
+        {
+            // If the channel isn't open or the network is congested, skip this frame.
+            if (bodyPoseChannel == null || bodyPoseChannel.ReadyState != RTCDataChannelState.Open || bodyPoseChannel.BufferedAmount > HIGH_WATER_MARK)
+            {
+                // Reset timer and try again next frame.
+                // This effectively drops the current frame to prioritize low latency.
+                timeSinceLastSend = 0f;
+                return;
+            }
+
+            // --- Your existing logic ---
+            // 1. Poll tracker for the LATEST absolute pose
+            // 2. Convert to local space
+            // 3. Calculate delta (or prepare keyframe)
+            // 4. Quantize and serialize into a byte[] packet
+            // 5. Prepend header (0x00 for delta, 0x01 for keyframe)
+            // 6. (Optional) zstd pass
+            // --------------------------
+
+            byte[] packetToSend = YourSerializationLogic();
+
+            // Send the data
+            bodyPoseChannel.Send(packetToSend);
+
+            // Reset the timer
+            timeSinceLastSend = 0f;
+        }
+    }
+}
+```
+
+This loop achieves your goal: it sends data at a fixed rate but automatically throttles itself if the network is congested, always prioritizing sending the most recent data possible and preventing a lag-inducing queue from building up.
+
+#### 2\. WebRTC Data Channel Configuration (The Magic)
+
+How WebRTC handles acknowledgements and reliability is determined when you *create* the data channel. For your teleoperation use case, you need an **unreliable and unordered** channel.
+
+This tells WebRTC:
+
+  * "Don't wait for acknowledgements (ACKs)."
+  * "If a packet is lost, forget about it. Don't try to retransmit it."
+  * "If packets arrive out of order, deliver them immediately. Don't wait to re-sequence them."
+
+This is perfect for real-time data where the newest packet is always the most important one.
+
+**C\# (Unity) - Creating the Channel:**
+
+When you create the data channel, you pass it an options struct.
+
+```csharp
+// In your WebRTC setup code
+RTCDataChannelInit options = new RTCDataChannelInit();
+options.ordered = false;        // Deliver packets as they arrive
+options.maxRetransmits = 0;     // Unreliable: 0 retransmissions if lost
+
+// Create the channel with these options
+bodyPoseChannel = pc.CreateDataChannel("body_pose", options);
+```
+
+**Python (aiortc) - Responding to the Channel:**
+
+The Python side will simply receive the channel created by Unity. The properties (unreliable, unordered) are negotiated automatically during the connection setup. Your Python `on("datachannel")` event handler doesn't need special configuration; it just inherits the properties of the channel that the sender created.
+
+### Summary: WebRTC's Built-in Mechanisms
+
+| Mechanism | What It Does | How You Use It |
+| :--- | :--- | :--- |
+| **Data Channel Options** | Configures the fundamental behavior (reliability, order). | Set `ordered = false` and `maxRetransmits = 0` when creating the channel in Unity. |
+| **`BufferedAmount`** | Provides backpressure feedback, telling you if the network is congested. | In your Unity `Update` loop, check `if (channel.BufferedAmount < HIGH_WATER_MARK)` before sending. |
+| **Acknowledgements (ACKs)** | Handled automatically by the underlying protocol (SCTP). | You don't interact with this directly. By setting `maxRetransmits = 0`, you are telling WebRTC not to use the ACK mechanism for retransmissions. |
+
+By using this combination of a sender-side polling loop that respects the `BufferedAmount` and a correctly configured unreliable/unordered data channel, you get a highly efficient, low-latency streaming architecture without needing to build any complex polling or acknowledgement logic yourself.
+
+---
+---

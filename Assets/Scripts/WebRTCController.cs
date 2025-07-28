@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -45,21 +44,38 @@ public class WebRTCController : MonoBehaviour
     public bool autoStartConnection = false;
     [Tooltip("Enable to receive video stream")]
     public bool receiveVideo = true;
-    private const ulong HIGH_WATER_MARK = 16 * 1024 * 1024; // 16 MB
-    private const ulong LOW_WATER_MARK = 4 * 1024 * 1024;   // 4 MB
+    private const ulong HIGH_WATER_MARK = 1 * 1024 * 1024; // 1 MB
 
     private RTCPeerConnection pc;
     private RTCDataChannel cameraChannel;
     private RTCDataChannel bodyPoseChannel;
     private Coroutine _sendBodyPoseCoroutine;
 
+    // Use a single volatile variable to store the latest pose data.
+    // This avoids queuing and accumulating latency.
+    private volatile byte[] _latestBodyPoseData = null;
+    private readonly object _bodyPoseDataLock = new object();
 
-    private Queue<byte[]> _bodyPoseDataQueue = new Queue<byte[]>();
-    private bool _isBodyPoseBufferLow = true;
 
     void Start()
     {
-        serverUrl = PlayerPrefs.GetString("serverUrl", serverUrl);
+        string savedUrl = PlayerPrefs.GetString("serverUrl");
+        if (!string.IsNullOrEmpty(savedUrl))
+        {
+            try
+            {
+                System.Uri uri = new System.Uri(savedUrl);
+                if (!string.IsNullOrEmpty(uri.Host))
+                {
+                    serverUrl = savedUrl;
+                }
+            }
+            catch (System.Exception)
+            {
+                Debug.LogWarning($"Ignoring invalid serverUrl from PlayerPrefs: {savedUrl}");
+            }
+        }
+
         statusText.text = "Ready to connect.";
 
         if (ipAddressInputField != null)
@@ -179,12 +195,15 @@ public class WebRTCController : MonoBehaviour
     // #if UNITY_ANDROID
     private void OnBodyPoseUpdated(BodyPoseProvider.PoseData poseData)
     {
-        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open)
+        // This method is called from the body tracking thread.
+        // We serialize the data and store it in a volatile variable.
+        // The sending coroutine on the main thread will pick it up.
+        if (poseData.bones != null && poseData.bones.Count > 0)
         {
-            if (poseData.bones != null && poseData.bones.Count > 0)
+            byte[] binaryData = SerializePoseData(poseData);
+            lock (_bodyPoseDataLock)
             {
-                byte[] binaryData = SerializePoseData(poseData);
-                _bodyPoseDataQueue.Enqueue(binaryData);
+                _latestBodyPoseData = binaryData;
             }
         }
     }
@@ -205,8 +224,14 @@ public class WebRTCController : MonoBehaviour
         cameraChannel = pc.CreateDataChannel("camera");
         SetupDataChannelEvents(cameraChannel);
 
-        // Create pose data channel
-        bodyPoseChannel = pc.CreateDataChannel("body_pose");
+        // Create pose data channel: Unreliable and Unordered
+        // This is critical for low-latency real-time data.
+        var bodyPoseChannelOptions = new RTCDataChannelInit()
+        {
+            ordered = false,
+            maxRetransmits = 0
+        };
+        bodyPoseChannel = pc.CreateDataChannel("body_pose", bodyPoseChannelOptions);
         SetupBodyPoseDataChannel(bodyPoseChannel);
 
         // Create offer
@@ -375,23 +400,32 @@ public class WebRTCController : MonoBehaviour
 
     private IEnumerator SendBodyPoseCoroutine()
     {
+        // Send at a fixed rate (e.g., 90 Hz) to control the data flow.
+        var wait = new WaitForSeconds(1.0f / 90.0f);
+
         while (true)
         {
-            // Wait until there's data in the queue
-            yield return new WaitUntil(() => _bodyPoseDataQueue.Count > 0);
-
-            // Process the queue as long as the buffer is not full
-            while (_bodyPoseDataQueue.Count > 0 && bodyPoseChannel.BufferedAmount < HIGH_WATER_MARK)
+            byte[] dataToSend = null;
+            lock (_bodyPoseDataLock)
             {
-                byte[] data = _bodyPoseDataQueue.Dequeue();
-                bodyPoseChannel.Send(data);
+                // Check if there is new data since the last send.
+                if (_latestBodyPoseData != null)
+                {
+                    dataToSend = _latestBodyPoseData;
+                    _latestBodyPoseData = null; // Consume the data to avoid re-sending.
+                }
             }
 
-            // If the buffer is full, wait for the next frame before checking again
-            if (bodyPoseChannel.BufferedAmount >= HIGH_WATER_MARK)
+            // Only send if there's new data and the network buffer is not congested.
+            // This prevents building up a queue and causing latency.
+            if (dataToSend != null && bodyPoseChannel.BufferedAmount < HIGH_WATER_MARK)
             {
-                yield return null;
+                bodyPoseChannel.Send(dataToSend);
             }
+            // If the buffer is full or there's no new data, we effectively "drop" the frame,
+            // prioritizing low latency and sending the most recent data in the next cycle.
+
+            yield return wait;
         }
     }
 
