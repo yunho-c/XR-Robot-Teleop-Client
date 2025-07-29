@@ -1357,3 +1357,556 @@ private void UpdatePoseData(NativeArray<MSDKUtility.NativeTransform> skeletonPos
     }
 }
 ```
+
+Yes, you can and should implement backpressure with the Unity WebRTC library. The mechanism is conceptually identical to the JavaScript API, but uses C\# conventions like properties and delegates.
+
+You'll use the `RTCDataChannel`'s `BufferedAmount` property and its `OnBufferedAmountLow` event.
+
+-----
+
+### 🔧 Key APIs in Unity
+
+The two main members of the `Unity.WebRTC.RTCDataChannel` class you'll use are:
+
+  * **`public ulong BufferedAmount { get; }`**: A read-only property that returns the number of bytes of data currently queued to be sent.
+  * **`public event Action OnBufferedAmountLow;`**: An event that you can subscribe to. It fires when the `BufferedAmount` drops to or below the `BufferedAmountLowThreshold`.
+
+The best way to manage this in Unity is with a **coroutine**, which allows you to pause the sending logic without freezing the main game thread.
+
+-----
+
+### 🚀 C\# Implementation Example
+
+Here's a complete `MonoBehaviour` script demonstrating how to send a queue of data chunks while respecting backpressure.
+
+This example uses a boolean flag (`_isBufferLow`) in combination with the `OnBufferedAmountLow` event. This is an efficient pattern that prevents you from having to re-subscribe to the event repeatedly inside a loop.
+
+```csharp
+using UnityEngine;
+using Unity.WebRTC;
+using System.Collections.Generic;
+using System.Text;
+
+public class WebRTCDataSender : MonoBehaviour
+{
+    private RTCDataChannel _dataChannel;
+    private Queue<byte[]> _dataQueue = new Queue<byte[]>();
+    private bool _isBufferLow = true; // Flag to control the sending flow
+
+    // Define your buffer thresholds
+    private const ulong HIGH_WATER_MARK = 16 * 1024 * 1024; // 16 MB
+    private const ulong LOW_WATER_MARK = 4 * 1024 * 1024;   // 4 MB
+
+    void Start()
+    {
+        // This is a placeholder for where you would get your RTCDataChannel
+        // For example, after a peer connection is established.
+        // peerConnection.OnDataChannel += channel => SetupDataChannel(channel);
+    }
+
+    // Call this method once you have a valid data channel
+    public void SetupDataChannel(RTCDataChannel channel)
+    {
+        _dataChannel = channel;
+        _dataChannel.OnOpen += HandleDataChannelOpen;
+        _dataChannel.OnClose += () => Debug.Log("Data Channel closed!");
+
+        // Set the low water mark threshold
+        _dataChannel.BufferedAmountLowThreshold = LOW_WATER_MARK;
+
+        // ✅ Subscribe to the event ONCE.
+        // When the buffer drains, it will set our flag to true.
+        _dataChannel.OnBufferedAmountLow += () =>
+        {
+            _isBufferLow = true;
+            Debug.Log("Buffer is low, ready to send more data.");
+        };
+    }
+
+    private void HandleDataChannelOpen()
+    {
+        Debug.Log("Data Channel opened! Starting to send data.");
+        // Start the sending coroutine once the channel is open
+        StartCoroutine(SendDataCoroutine());
+    }
+
+    // Use this public method to add data you want to send
+    public void QueueDataForSending(string message)
+    {
+        byte[] data = Encoding.UTF8.GetBytes(message);
+        _dataQueue.Enqueue(data);
+    }
+
+    private IEnumerator<YieldInstruction> SendDataCoroutine()
+    {
+        // Continuously run to process the queue
+        while (true)
+        {
+            // If the buffer is full, set our flag and wait
+            if (_dataChannel.BufferedAmount > HIGH_WATER_MARK)
+            {
+                _isBufferLow = false;
+            }
+
+            // Wait until the buffer is low AND there's something to send
+            yield return new WaitUntil(() => _isBufferLow && _dataQueue.Count > 0);
+
+            // Send all data currently in the queue, as long as we don't fill the buffer again
+            while (_dataQueue.Count > 0)
+            {
+                 // Double-check buffer before sending each chunk from the queue
+                if (_dataChannel.BufferedAmount > HIGH_WATER_MARK)
+                {
+                    _isBufferLow = false;
+                    break; // Exit inner loop and go back to waiting
+                }
+                
+                byte[] data = _dataQueue.Dequeue();
+                _dataChannel.Send(data);
+            }
+        }
+    }
+}
+```
+
+
+Could you use the following reference to implement backpressure for communicating the body pose in @/Assets/Scripts/WebRTCController.cs ? Also, could you think about more efficient ways to send the body pose? (Currently, it seems to send a string-ified floats with lots of decimals). 
+
+Yes, you can and should implement backpressure with the Unity WebRTC library. The mechanism is conceptually identical to the JavaScript API, but uses C\# conventions like properties and delegates.
+
+You'll use the `RTCDataChannel`'s `BufferedAmount` property and its `OnBufferedAmountLow` event.
+
+-----
+
+### 🔧 Key APIs in Unity
+
+The two main members of the `Unity.WebRTC.RTCDataChannel` class you'll use are:
+
+  * **`public ulong BufferedAmount { get; }`**: A read-only property that returns the number of bytes of data currently queued to be sent.
+  * **`public event Action OnBufferedAmountLow;`**: An event that you can subscribe to. It fires when the `BufferedAmount` drops to or below the `BufferedAmountLowThreshold`.
+
+The best way to manage this in Unity is with a **coroutine**, which allows you to pause the sending logic without freezing the main game thread.
+
+-----
+
+### 🚀 C\# Implementation Example
+
+Here's a complete `MonoBehaviour` script demonstrating how to send a queue of data chunks while respecting backpressure.
+
+This example uses a boolean flag (`_isBufferLow`) in combination with the `OnBufferedAmountLow` event. This is an efficient pattern that prevents you from having to re-subscribe to the event repeatedly inside a loop.
+
+```csharp
+using UnityEngine;
+using Unity.WebRTC;
+using System.Collections.Generic;
+using System.Text;
+
+public class WebRTCDataSender : MonoBehaviour
+{
+    private RTCDataChannel _dataChannel;
+    private Queue<byte[]> _dataQueue = new Queue<byte[]>();
+    private bool _isBufferLow = true; // Flag to control the sending flow
+
+    // Define your buffer thresholds
+    private const ulong HIGH_WATER_MARK = 16 * 1024 * 1024; // 16 MB
+    private const ulong LOW_WATER_MARK = 4 * 1024 * 1024;   // 4 MB
+
+    void Start()
+    {
+        // This is a placeholder for where you would get your RTCDataChannel
+        // For example, after a peer connection is established.
+        // peerConnection.OnDataChannel += channel => SetupDataChannel(channel);
+    }
+
+    // Call this method once you have a valid data channel
+    public void SetupDataChannel(RTCDataChannel channel)
+    {
+        _dataChannel = channel;
+        _dataChannel.OnOpen += HandleDataChannelOpen;
+        _dataChannel.OnClose += () => Debug.Log("Data Channel closed!");
+
+        // Set the low water mark threshold
+        _dataChannel.BufferedAmountLowThreshold = LOW_WATER_MARK;
+
+        // ✅ Subscribe to the event ONCE.
+        // When the buffer drains, it will set our flag to true.
+        _dataChannel.OnBufferedAmountLow += () =>
+        {
+            _isBufferLow = true;
+            Debug.Log("Buffer is low, ready to send more data.");
+        };
+    }
+
+    private void HandleDataChannelOpen()
+    {
+        Debug.Log("Data Channel opened! Starting to send data.");
+        // Start the sending coroutine once the channel is open
+        StartCoroutine(SendDataCoroutine());
+    }
+
+    // Use this public method to add data you want to send
+    public void QueueDataForSending(string message)
+    {
+        byte[] data = Encoding.UTF8.GetBytes(message);
+        _dataQueue.Enqueue(data);
+    }
+
+    private IEnumerator<YieldInstruction> SendDataCoroutine()
+    {
+        // Continuously run to process the queue
+        while (true)
+        {
+            // If the buffer is full, set our flag and wait
+            if (_dataChannel.BufferedAmount > HIGH_WATER_MARK)
+            {
+                _isBufferLow = false;
+            }
+
+            // Wait until the buffer is low AND there's something to send
+            yield return new WaitUntil(() => _isBufferLow && _dataQueue.Count > 0);
+
+            // Send all data currently in the queue, as long as we don't fill the buffer again
+            while (_dataQueue.Count > 0)
+            {
+                 // Double-check buffer before sending each chunk from the queue
+                if (_dataChannel.BufferedAmount > HIGH_WATER_MARK)
+                {
+                    _isBufferLow = false;
+                    break; // Exit inner loop and go back to waiting
+                }
+                
+                byte[] data = _dataQueue.Dequeue();
+                _dataChannel.Send(data);
+            }
+        }
+    }
+}
+```
+
+
+That's an excellent and important question. Yes, you will need to update your Python `aiortc` peer to handle the new binary format. The JSON parsing code will no longer work.
+
+You need to implement a deserializer that reads the byte stream and reconstructs the pose data. The logic is the mirror image of the `SerializePoseData` method I added in C#.
+
+Here is a Python function that shows how to deserialize the data using the `struct` module. You would call this function from within your data channel's `on("message")` event handler.
+
+```python
+import struct
+from typing import List, Tuple
+
+# Define a simple data structure to hold the bone data
+class Bone:
+    def __init__(self, position: Tuple[float, float, float], rotation: Tuple[float, float, float, float]):
+        self.position = position
+        self.rotation = rotation
+
+    def __repr__(self):
+        return f"Bone(pos={self.position}, rot={self.rotation})"
+
+def deserialize_pose_data(data: bytes) -> List[Bone]:
+    """
+    Deserializes the binary pose data stream from the Unity client.
+    
+    Args:
+        data: The raw byte string received from the data channel.
+        
+    Returns:
+        A list of Bone objects.
+    """
+    bones = []
+    offset = 0
+    
+    # The C# BinaryWriter is little-endian by default. The format string '<' specifies this.
+    # '<i' = little-endian integer (4 bytes)
+    # '<7f' = 7 little-endian floats (7 * 4 = 28 bytes)
+    
+    try:
+        # 1. Read the number of bones (an integer)
+        (bone_count,) = struct.unpack_from('<i', data, offset)
+        offset += 4
+        
+        # 2. Loop for each bone to read its data
+        for _ in range(bone_count):
+            # Ensure there is enough data left in the buffer
+            if offset + 28 > len(data):
+                print("Error: Incomplete data buffer for a bone.")
+                break
+
+            # 3. Unpack 7 floats for the bone's position (x,y,z) and rotation (x,y,z,w)
+            bone_data = struct.unpack_from('<7f', data, offset)
+            offset += 28
+            
+            position = (bone_data[0], bone_data[1], bone_data[2])
+            rotation = (bone_data[3], bone_data[4], bone_data[5], bone_data[6])
+            
+            bones.append(Bone(position, rotation))
+            
+    except struct.error as e:
+        print(f"Error deserializing pose data: {e}")
+        
+    return bones
+
+# --- Example Usage in your aiortc code ---
+# @pc.on("datachannel")
+# def on_datachannel(channel):
+#     if channel.label == "body_pose":
+#         @channel.on("message")
+#         def on_message(message):
+#             # The message is now bytes, not a string
+#             if isinstance(message, bytes):
+#                 pose_data = deserialize_pose_data(message)
+#                 # Now you have the pose_data as a list of Bone objects
+#                 # print(f"Received {len(pose_data)} bones")
+#                 # Do something with the pose...
+```
+
+### Key Points to Remember:
+
+1.  **Endianness**: The `BinaryWriter` in C# uses little-endian byte order by default. The `<` in the Python `struct.unpack` format string ensures it's read correctly.
+2.  **Data Types**: We are unpacking an `int` for the count and then groups of 7 `float`s.
+3.  **Error Handling**: The example includes basic checks to prevent errors if you receive an incomplete data packet.
+
+Now that this is clarified, I'll mark the task as complete.
+
+You've previously implemented a custom binary serialization and backpressure mechanism in the other end (Unity-side). Could you implement the deserializer on the python end @/python/examples/360_server_unity.py ? If you want, I can provide the code of the Unity-side WebRTCController.
+
+The below is your previous message on python-side integration:
+
+---
+
+That's an excellent and important question. Yes, you will need to update your Python `aiortc` peer to handle the new binary format. The JSON parsing code will no longer work.
+
+You need to implement a deserializer that reads the byte stream and reconstructs the pose data. The logic is the mirror image of the `SerializePoseData` method I added in C#.
+
+Here is a Python function that shows how to deserialize the data using the `struct` module. You would call this function from within your data channel's `on("message")` event handler.
+
+```python
+import struct
+from typing import List, Tuple
+
+# Define a simple data structure to hold the bone data
+class Bone:
+    def __init__(self, position: Tuple[float, float, float], rotation: Tuple[float, float, float, float]):
+        self.position = position
+        self.rotation = rotation
+
+    def __repr__(self):
+        return f"Bone(pos={self.position}, rot={self.rotation})"
+
+def deserialize_pose_data(data: bytes) -> List[Bone]:
+    """
+    Deserializes the binary pose data stream from the Unity client.
+    
+    Args:
+        data: The raw byte string received from the data channel.
+        
+    Returns:
+        A list of Bone objects.
+    """
+    bones = []
+    offset = 0
+    
+    # The C# BinaryWriter is little-endian by default. The format string '<' specifies this.
+    # '<i' = little-endian integer (4 bytes)
+    # '<7f' = 7 little-endian floats (7 * 4 = 28 bytes)
+    
+    try:
+        # 1. Read the number of bones (an integer)
+        (bone_count,) = struct.unpack_from('<i', data, offset)
+        offset += 4
+        
+        # 2. Loop for each bone to read its data
+        for _ in range(bone_count):
+            # Ensure there is enough data left in the buffer
+            if offset + 28 > len(data):
+                print("Error: Incomplete data buffer for a bone.")
+                break
+
+            # 3. Unpack 7 floats for the bone's position (x,y,z) and rotation (x,y,z,w)
+            bone_data = struct.unpack_from('<7f', data, offset)
+            offset += 28
+            
+            position = (bone_data[0], bone_data[1], bone_data[2])
+            rotation = (bone_data[3], bone_data[4], bone_data[5], bone_data[6])
+            
+            bones.append(Bone(position, rotation))
+            
+    except struct.error as e:
+        print(f"Error deserializing pose data: {e}")
+        
+    return bones
+
+# --- Example Usage in your aiortc code ---
+# @pc.on("datachannel")
+# def on_datachannel(channel):
+#     if channel.label == "body_pose":
+#         @channel.on("message")
+#         def on_message(message):
+#             # The message is now bytes, not a string
+#             if isinstance(message, bytes):
+#                 pose_data = deserialize_pose_data(message)
+#                 # Now you have the pose_data as a list of Bone objects
+#                 # print(f"Received {len(pose_data)} bones")
+#                 # Do something with the pose...
+```
+
+### Key Points to Remember:
+
+1.  **Endianness**: The `BinaryWriter` in C# uses little-endian byte order by default. The `<` in the Python `struct.unpack` format string ensures it's read correctly.
+2.  **Data Types**: We are unpacking an `int` for the count and then groups of 7 `float`s.
+3.  **Error Handling**: The example includes basic checks to prevent errors if you receive an incomplete data packet.
+
+Now that this is clarified, I'll mark the task as complete.
+
+---
+
+Thank you for providing the Unity-side C# code. This is very helpful for verification.
+
+I have reviewed the `SerializePoseData` method in your `WebRTCController.cs` and compared it against the `deserialize_pose_data` function I implemented in the Python script.
+
+**C# Serialization (`WebRTCController.cs`):**
+1.  Writes the number of bones as an `int` (`writer.Write(poseData.bones.Count)`).
+2.  For each bone, it writes 7 `float` values in the following order:
+    *   `position.x`
+    *   `position.y`
+    *   `position.z`
+    *   `rotation.x`
+    *   `rotation.y`
+    *   `rotation.z`
+    *   `rotation.w`
+
+**Python Deserialization (`360_server_unity.py`):**
+1.  Reads the number of bones as a little-endian integer (`struct.unpack_from('<i', ...)`).
+2.  For each bone, it reads a block of 7 little-endian floats (`struct.unpack_from('<7f', ...)`).
+3.  It correctly assigns the first 3 floats to `position` and the next 4 floats to `rotation`.
+
+The logic is a perfect mirror. The data types, order, and endianness (`little-endian` is the default for C#'s `BinaryWriter` and is explicitly specified in Python with `<`) all match.
+
+The implementation is correct and should work as expected. I've also confirmed that the `rerun` logging in the Python script is correctly adapted to the new `Bone` object structure, using the bone's index as its ID and correctly accessing the `bone.position` tuple.
+
+Since the code is verified and no changes are needed, I will mark the task as complete.
+
+---
+---
+
+Excellent questions. This is where the high-level architecture meets the low-level reality of the network stack. Let's clear this up, as it's one of the most common points of confusion when implementing real-time systems on WebRTC.
+
+### The Golden Rule: Sender Polls, Receiver Listens
+
+First, to answer your core question directly:
+
+  * **The Sender (Unity) polls its *own* data source (the tracking system) at a fixed rate.**
+  * **The Receiver (Python) does *not* poll the sender.** The receiver is passive; it simply processes data as soon as it arrives.
+
+A request/response pattern where the receiver polls the sender for data would be disastrous for latency. It would add a full network round-trip-time (RTT) to every single update. You want a "fire-and-forget" stream from sender to receiver.
+
+-----
+
+### How to Achieve This in WebRTC
+
+WebRTC is perfectly designed for this, but you have to configure it correctly. It provides sophisticated, built-in mechanisms for flow control that are far better than anything you would build manually.
+
+Here’s how it works and how you should implement it.
+
+#### 1\. The Sender-Side Polling Loop (Unity/C\#)
+
+Your polling logic in Unity remains the same, but with one crucial addition: **you must check WebRTC's backpressure before sending.**
+
+WebRTC exposes a property on the data channel called `BufferedAmount`. This tells you how many bytes of data you have told WebRTC to send that have *not yet been sent over the network*. It's a queue size.
+
+If this number gets too high, it means you are producing data faster than the network can handle it. You should stop sending temporarily to let the buffer drain. This is the **built-in flow control**.
+
+Here is the conceptual code for your Unity sender:
+
+```csharp
+public class PoseSender : MonoBehaviour
+{
+    private RTCDataChannel bodyPoseChannel;
+    private float sendInterval = 1.0f / 100.0f; // 100 Hz
+    private float timeSinceLastSend = 0f;
+
+    // Set a "High Water Mark". If the buffer exceeds this, we pause sending.
+    // 1MB is a reasonable starting point. You can tune this.
+    private const ulong HIGH_WATER_MARK = 1024 * 1024;
+
+    void Update()
+    {
+        timeSinceLastSend += Time.deltaTime;
+
+        // Check if it's time to send the next packet
+        if (timeSinceLastSend >= sendInterval)
+        {
+            // If the channel isn't open or the network is congested, skip this frame.
+            if (bodyPoseChannel == null || bodyPoseChannel.ReadyState != RTCDataChannelState.Open || bodyPoseChannel.BufferedAmount > HIGH_WATER_MARK)
+            {
+                // Reset timer and try again next frame.
+                // This effectively drops the current frame to prioritize low latency.
+                timeSinceLastSend = 0f;
+                return;
+            }
+
+            // --- Your existing logic ---
+            // 1. Poll tracker for the LATEST absolute pose
+            // 2. Convert to local space
+            // 3. Calculate delta (or prepare keyframe)
+            // 4. Quantize and serialize into a byte[] packet
+            // 5. Prepend header (0x00 for delta, 0x01 for keyframe)
+            // 6. (Optional) zstd pass
+            // --------------------------
+
+            byte[] packetToSend = YourSerializationLogic();
+
+            // Send the data
+            bodyPoseChannel.Send(packetToSend);
+
+            // Reset the timer
+            timeSinceLastSend = 0f;
+        }
+    }
+}
+```
+
+This loop achieves your goal: it sends data at a fixed rate but automatically throttles itself if the network is congested, always prioritizing sending the most recent data possible and preventing a lag-inducing queue from building up.
+
+#### 2\. WebRTC Data Channel Configuration (The Magic)
+
+How WebRTC handles acknowledgements and reliability is determined when you *create* the data channel. For your teleoperation use case, you need an **unreliable and unordered** channel.
+
+This tells WebRTC:
+
+  * "Don't wait for acknowledgements (ACKs)."
+  * "If a packet is lost, forget about it. Don't try to retransmit it."
+  * "If packets arrive out of order, deliver them immediately. Don't wait to re-sequence them."
+
+This is perfect for real-time data where the newest packet is always the most important one.
+
+**C\# (Unity) - Creating the Channel:**
+
+When you create the data channel, you pass it an options struct.
+
+```csharp
+// In your WebRTC setup code
+RTCDataChannelInit options = new RTCDataChannelInit();
+options.ordered = false;        // Deliver packets as they arrive
+options.maxRetransmits = 0;     // Unreliable: 0 retransmissions if lost
+
+// Create the channel with these options
+bodyPoseChannel = pc.CreateDataChannel("body_pose", options);
+```
+
+**Python (aiortc) - Responding to the Channel:**
+
+The Python side will simply receive the channel created by Unity. The properties (unreliable, unordered) are negotiated automatically during the connection setup. Your Python `on("datachannel")` event handler doesn't need special configuration; it just inherits the properties of the channel that the sender created.
+
+### Summary: WebRTC's Built-in Mechanisms
+
+| Mechanism | What It Does | How You Use It |
+| :--- | :--- | :--- |
+| **Data Channel Options** | Configures the fundamental behavior (reliability, order). | Set `ordered = false` and `maxRetransmits = 0` when creating the channel in Unity. |
+| **`BufferedAmount`** | Provides backpressure feedback, telling you if the network is congested. | In your Unity `Update` loop, check `if (channel.BufferedAmount < HIGH_WATER_MARK)` before sending. |
+| **Acknowledgements (ACKs)** | Handled automatically by the underlying protocol (SCTP). | You don't interact with this directly. By setting `maxRetransmits = 0`, you are telling WebRTC not to use the ACK mechanism for retransmissions. |
+
+By using this combination of a sender-side polling loop that respects the `BufferedAmount` and a correctly configured unreliable/unordered data channel, you get a highly efficient, low-latency streaming architecture without needing to build any complex polling or acknowledgement logic yourself.
+
+---
+---

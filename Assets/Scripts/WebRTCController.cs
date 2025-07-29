@@ -1,6 +1,6 @@
-
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using Unity.WebRTC;
 using UnityEngine.Networking;
@@ -21,7 +21,7 @@ public class OrientationState
 public class WebRTCController : MonoBehaviour
 {
     [Header("Signaling Server")]
-    [Tooltip("URL of the signaling server")]
+    [Tooltip("Default URL of signaling server (overriden by PlayerPrefs)")]
     public string serverUrl = "http://localhost:8080/offer";
 
     [Header("VR Camera")]
@@ -40,16 +40,42 @@ public class WebRTCController : MonoBehaviour
     [SerializeField] private TMP_InputField ipAddressInputField;
 
     [Header("WebRTC Settings")]
+    [Tooltip("Enable to automatically start the WebRTC connection on start")]
+    public bool autoStartConnection = false;
     [Tooltip("Enable to receive video stream")]
     public bool receiveVideo = true;
+    private const ulong HIGH_WATER_MARK = 1 * 1024 * 1024; // 1 MB
 
     private RTCPeerConnection pc;
     private RTCDataChannel cameraChannel;
     private RTCDataChannel bodyPoseChannel;
+    private Coroutine _sendBodyPoseCoroutine;
+
+    // Use a single volatile variable to store the latest pose data.
+    // This avoids queuing and accumulating latency.
+    private volatile byte[] _latestBodyPoseData = null;
+    private readonly object _bodyPoseDataLock = new object();
+
 
     void Start()
     {
-        serverUrl = PlayerPrefs.GetString("serverUrl", serverUrl);
+        string savedUrl = PlayerPrefs.GetString("serverUrl");
+        if (!string.IsNullOrEmpty(savedUrl))
+        {
+            try
+            {
+                System.Uri uri = new System.Uri(savedUrl);
+                if (!string.IsNullOrEmpty(uri.Host))
+                {
+                    serverUrl = savedUrl;
+                }
+            }
+            catch (System.Exception)
+            {
+                Debug.LogWarning($"Ignoring invalid serverUrl from PlayerPrefs: {savedUrl}");
+            }
+        }
+
         statusText.text = "Ready to connect.";
 
         if (ipAddressInputField != null)
@@ -67,6 +93,11 @@ public class WebRTCController : MonoBehaviour
                     Debug.LogError("Error parsing server URL: " + e.Message);
                 }
             }
+        }
+
+        if (autoStartConnection)
+        {
+            StartConnection();
         }
     }
 
@@ -86,6 +117,11 @@ public class WebRTCController : MonoBehaviour
         if (bodyPoseProvider != null)
         {
             bodyPoseProvider.OnPoseUpdated -= OnBodyPoseUpdated;
+        }
+        if (_sendBodyPoseCoroutine != null)
+        {
+            StopCoroutine(_sendBodyPoseCoroutine);
+            _sendBodyPoseCoroutine = null;
         }
         // #endif
     }
@@ -130,6 +166,11 @@ public class WebRTCController : MonoBehaviour
             bodyPoseChannel.Close();
             bodyPoseChannel = null;
         }
+        if (_sendBodyPoseCoroutine != null)
+        {
+            StopCoroutine(_sendBodyPoseCoroutine);
+            _sendBodyPoseCoroutine = null;
+        }
         if (pc != null)
         {
             pc.Close();
@@ -154,12 +195,15 @@ public class WebRTCController : MonoBehaviour
     // #if UNITY_ANDROID
     private void OnBodyPoseUpdated(BodyPoseProvider.PoseData poseData)
     {
-        if (bodyPoseChannel != null && bodyPoseChannel.ReadyState == RTCDataChannelState.Open)
+        // This method is called from the body tracking thread.
+        // We serialize the data and store it in a volatile variable.
+        // The sending coroutine on the main thread will pick it up.
+        if (poseData.bones != null && poseData.bones.Count > 0)
         {
-            if (poseData.bones != null && poseData.bones.Count > 0)
+            byte[] binaryData = SerializePoseData(poseData);
+            lock (_bodyPoseDataLock)
             {
-                string jsonPose = JsonUtility.ToJson(poseData);
-                bodyPoseChannel.Send(jsonPose);
+                _latestBodyPoseData = binaryData;
             }
         }
     }
@@ -180,9 +224,15 @@ public class WebRTCController : MonoBehaviour
         cameraChannel = pc.CreateDataChannel("camera");
         SetupDataChannelEvents(cameraChannel);
 
-        // Create pose data channel
-        bodyPoseChannel = pc.CreateDataChannel("body_pose");
-        SetupDataChannelEvents(bodyPoseChannel);
+        // Create pose data channel: Unreliable and Unordered
+        // This is critical for low-latency real-time data.
+        var bodyPoseChannelOptions = new RTCDataChannelInit()
+        {
+            ordered = false,
+            maxRetransmits = 0
+        };
+        bodyPoseChannel = pc.CreateDataChannel("body_pose", bodyPoseChannelOptions);
+        SetupBodyPoseDataChannel(bodyPoseChannel);
 
         // Create offer
         var offer = pc.CreateOffer();
@@ -260,8 +310,13 @@ public class WebRTCController : MonoBehaviour
             else if (channel.Label == "body_pose")
             {
                 bodyPoseChannel = channel;
+                SetupBodyPoseDataChannel(channel);
+
             }
-            SetupDataChannelEvents(channel);
+            else
+            {
+                SetupDataChannelEvents(channel);
+            }
         };
 
         // The client receives the video stream
@@ -323,6 +378,80 @@ public class WebRTCController : MonoBehaviour
             // Handle incoming messages if needed
             Debug.Log($"Received message on {channel.Label} channel: {System.Text.Encoding.UTF8.GetString(bytes)}");
         };
+    }
+
+    private void SetupBodyPoseDataChannel(RTCDataChannel channel)
+    {
+        SetupDataChannelEvents(channel);
+
+        channel.OnOpen = () =>
+        {
+            Debug.Log($"{channel.Label} Channel is open!");
+            UnityMainThreadDispatcher.Instance().Enqueue(() =>
+            {
+                statusText.text = $"{channel.Label} channel open.";
+            });
+            if (_sendBodyPoseCoroutine == null)
+            {
+                _sendBodyPoseCoroutine = StartCoroutine(SendBodyPoseCoroutine());
+            }
+        };
+    }
+
+    private IEnumerator SendBodyPoseCoroutine()
+    {
+        // Send at a fixed rate (e.g., 90 Hz) to control the data flow.
+        var wait = new WaitForSeconds(1.0f / 90.0f);
+
+        while (true)
+        {
+            byte[] dataToSend = null;
+            lock (_bodyPoseDataLock)
+            {
+                // Check if there is new data since the last send.
+                if (_latestBodyPoseData != null)
+                {
+                    dataToSend = _latestBodyPoseData;
+                    _latestBodyPoseData = null; // Consume the data to avoid re-sending.
+                }
+            }
+
+            // Only send if there's new data and the network buffer is not congested.
+            // This prevents building up a queue and causing latency.
+            if (dataToSend != null && bodyPoseChannel.BufferedAmount < HIGH_WATER_MARK)
+            {
+                bodyPoseChannel.Send(dataToSend);
+            }
+            // If the buffer is full or there's no new data, we effectively "drop" the frame,
+            // prioritizing low latency and sending the most recent data in the next cycle.
+
+            yield return wait;
+        }
+    }
+
+    private byte[] SerializePoseData(BodyPoseProvider.PoseData poseData)
+    {
+        using (var memoryStream = new MemoryStream())
+        {
+            using (var writer = new BinaryWriter(memoryStream))
+            {
+                writer.Write(poseData.bones.Count);
+                foreach (var bone in poseData.bones)
+                {
+                    writer.Write((int)bone.id);
+
+                    writer.Write(bone.position.x);
+                    writer.Write(bone.position.y);
+                    writer.Write(bone.position.z);
+
+                    writer.Write(bone.rotation.x);
+                    writer.Write(bone.rotation.y);
+                    writer.Write(bone.rotation.z);
+                    writer.Write(bone.rotation.w);
+                }
+            }
+            return memoryStream.ToArray();
+        }
     }
 
     private void SendOrientation()
