@@ -35,6 +35,8 @@ public class BodyPoseProvider : MonoBehaviour
     #region Public Fields
     // [Tooltip("The MetaSourceDataProvider component that provides the raw tracking data.")]
     // public MetaSourceDataProvider sourceDataProvider;
+    [Tooltip("Switch to enable bone position representation as red balls.")]
+    public bool enableBallRep = true;
     #endregion
 
     #region Public Properties
@@ -47,6 +49,7 @@ public class BodyPoseProvider : MonoBehaviour
     #region Private Fields
     private ISourceDataProvider sourceDataProvider;
     private bool _isInitialized = false;
+    private List<GameObject> ballRepObjects = new List<GameObject>();
     #endregion
 
     #region Events
@@ -139,10 +142,43 @@ public class BodyPoseProvider : MonoBehaviour
             Debug.Log("BodyPoseProvider: Detected Body (UpperBody) skeleton type.");
         }
 
+        // For ball representation, hide the mesh of the body if it exists
+        if (enableBallRep)
+        { 
+            Renderer[] bodyRenderer = GetComponentsInChildren<Renderer>();
+            foreach (Renderer renderer in bodyRenderer)
+            {
+                if (renderer != null)
+                {
+                    renderer.enabled = false; // Disable the mesh renderer
+                }
+                else
+                {
+                    Debug.LogError("BodyPoseProvider: Renderer not found on body object. Cannot disable mesh.");
+                }
+            }
+        }
+
         // Populate bones list with all possible bone IDs for the detected skeleton type
         for (int i = (int)startBoneId; i < (int)endBoneId; i++)
         {
             CurrentPoseData.bones.Add(new BoneData { id = (OVRSkeleton.BoneId)i });
+            if (enableBallRep)
+            {
+                GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Renderer ballRenderer = ball.GetComponent<Renderer>();
+                if (ballRenderer != null)
+                {
+                    ballRenderer.material.color = Color.red; // Set color for visibility
+                }
+                else
+                {
+                    Debug.LogWarning("BodyPoseProvider: Renderer not found on the ball object. Using default material.");
+                }
+                ball.transform.localScale = Vector3.one * 0.02f; // Adjust size as needed
+                ball.name = $"Bone_{((OVRSkeleton.BoneId)i).ToString()}";
+                ballRepObjects.Add(ball);
+            }
         }
 
         if (CurrentPoseData.bones.Count > 0)
@@ -170,6 +206,11 @@ public class BodyPoseProvider : MonoBehaviour
                 boneData.position = skeletonPose[i].Position;
                 boneData.rotation = skeletonPose[i].Orientation;
                 CurrentPoseData.bones[i] = boneData;
+                if (enableBallRep && i < ballRepObjects.Count)
+                {
+                    ballRepObjects[i].transform.position = boneData.position;
+                    ballRepObjects[i].transform.rotation = boneData.rotation;
+                }
             }
         }
         else if (skeletonPose.IsCreated && skeletonPose.Length != CurrentPoseData.bones.Count)
