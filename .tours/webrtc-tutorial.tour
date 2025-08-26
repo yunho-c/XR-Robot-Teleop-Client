@@ -1,0 +1,21 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "webrtc-tutorial",
+  "steps": [
+    {
+      "file": "Assets/Samples/WebRTC/3.0.0-pre.8/Example/VideoReceive/VideoReceiveSample.cs",
+      "description": "Video frame receive callback registration",
+      "line": 77
+    },
+    {
+      "file": "Assets/Samples/WebRTC/3.0.0-pre.8/Example/VideoReceive/VideoReceiveSample.cs",
+      "description": "Video track addition is handled in the server (the PC, not the headset).",
+      "line": 171
+    },
+    {
+      "file": "Assets/Samples/WebRTC/3.0.0-pre.8/Example/VideoReceive/VideoReceiveSample.cs",
+      "description": "`receiveImage` is a `RawImage` object. ",
+      "line": 26
+    }
+  ]
+}
