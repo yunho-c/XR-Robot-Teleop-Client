@@ -36,7 +36,8 @@ public class WebRTCController : MonoBehaviour
 
   [Header("UI Elements")]
   [SerializeField] private TMP_Text statusText;
-  [SerializeField] private RawImage videoImage;
+  [SerializeField] private RenderTexture videoRenderTexture;
+  [SerializeField] private Material videoMaterial;
   [SerializeField] private TMP_InputField ipAddressInputField;
 
   [Header("WebRTC Settings")]
@@ -343,20 +344,9 @@ public class WebRTCController : MonoBehaviour
           videoTrack = track;
           videoTrack.OnVideoReceived += (texture) =>
               {
-                Debug.Log("videoImage (original):", videoImage);
-                Debug.Log("Received first video frame");
-                videoImage.texture = texture;
-                Debug.Log("videoImage:", videoImage);
-                Debug.Log("videoImage.texture:", videoImage.texture);
-                StartCoroutine(WebRTC.Update()); // MARK
-                // UnityMainThreadDispatcher.Instance().Enqueue(() =>
-                //     {
-                //       if (videoImage != null)
-                //       {
-                //         Debug.Log("Set video texture");
-                //         videoImage.texture = texture;
-                //       }
-                //     });
+                Debug.Log("Received first video frame (and set texture).");
+                videoMaterial.mainTexture = texture;
+                StartCoroutine(WebRTC.Update());
               };
         }
       }

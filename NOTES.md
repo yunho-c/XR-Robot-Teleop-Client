@@ -1910,3 +1910,109 @@ By using this combination of a sender-side polling loop that respects the `Buffe
 
 ---
 ---
+
+> What would it take to refactor the `RawImage` into a `RenderTexture` (that is linked to a material and a Quad)?
+
+⏺ I'll examine the current RawImage implementation and help you understand what's needed to refactor it to a RenderTexture with a material and quad setup.
+
+⏺ Looking at line 39, I can see the RawImage videoImage field and how it's used in the video handling code around lines 344-360. To refactor this to use a RenderTexture with a material and quad, here's what would need to be changed:
+
+  Key Changes Required:
+
+  1. Replace RawImage with RenderTexture + Material + Quad:
+    - Remove `[SerializeField] private RawImage videoImage;` (line 39)
+    - Add `[SerializeField] private RenderTexture renderTexture;`
+    - Add `[SerializeField] private Material videoMaterial;`
+    - Add `[SerializeField] private GameObject quad;` (or `MeshRenderer` component)
+  2. Texture Assignment Changes:
+    - Replace `videoImage.texture = texture;` (line 348) with `Graphics.Blit(texture, renderTexture);`
+    - Set the renderTexture as the main texture on the material: `videoMaterial.mainTexture = renderTexture;`
+  3. Setup Requirements:
+    - Create a RenderTexture asset with appropriate dimensions
+    - Create a material (likely with Unlit/Texture shader)
+    - Create a quad GameObject with MeshRenderer using the material
+    - Remove any UI Canvas dependencies since you're moving from UI to 3D world space
+
+  Benefits of this approach:
+  - Better performance for 3D rendering
+  - More flexibility with shaders and effects
+  - Can be positioned anywhere in 3D space
+  - Better integration with XR/VR workflows
+
+  The main code change would be in the OnVideoReceived callback around line 344-360, where instead of assigning to a UI RawImage, you'd blit to the RenderTexture and ensure the material is properly configured.
+
+> Why is the import of videoMaterial and quad necessary?
+
+⏺ You're right to question this. The imports aren't strictly necessary - you could create these components dynamically in code instead:
+
+  Alternative approach without SerializeField imports:
+
+  1. Create RenderTexture dynamically:
+  ```
+  private RenderTexture renderTexture;
+  // In Start() or when needed:
+  renderTexture = new RenderTexture(1920, 1080, 0);
+  ```
+
+  2. Create Material dynamically:
+  ```
+  private Material videoMaterial;
+  // In Start():
+  videoMaterial = new Material(Shader.Find("Unlit/Texture"));
+  videoMaterial.mainTexture = renderTexture;
+  ```
+
+  3. Create Quad dynamically:
+  ```
+  // In Start():
+  GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+  quad.GetComponent<MeshRenderer>().material = videoMaterial;
+  ```
+
+  Reasons you might still want SerializeField imports:
+
+  - Designer control: Allows positioning/scaling the quad in the scene editor
+  - Shader flexibility: Designer can choose custom shaders without code changes
+  - Performance: Avoids runtime object creation
+  - Debugging: Easier to inspect in the inspector
+
+  Minimal refactor would just need:
+  - `private RenderTexture renderTexture;`
+  - Replace `videoImage.texture = texture` with `Graphics.Blit(texture, renderTexture)`
+  - Set up the material/quad relationship however you prefer (dynamically or via inspector)
+
+  The SerializeField approach gives more flexibility, but you're correct that it's not mandatory.
+
+> If I set up the material and texture in the Unity Editor GUI (in the scene), is doing this necessary?
+
+⏺ No, if you set up the material and texture in the Unity Editor GUI, you don't need the SerializeField imports.
+
+  What you'd do in the Editor:
+  1. Create a RenderTexture asset in your project
+  2. Create a Material asset and assign the RenderTexture to its main texture slot
+  3. Create a Quad GameObject in the scene and assign the material to its MeshRenderer
+
+  Then in code, you only need:
+  ```
+  private RenderTexture renderTexture; // Reference to your RenderTexture asset
+
+  void Start() {
+      // Get reference to your RenderTexture asset
+      renderTexture = Resources.Load<RenderTexture>("YourRenderTextureName");
+      // or assign it in inspector if you want one SerializeField
+  }
+  ```
+
+  The key change would just be:
+  Replace line 348:
+  `videoImage.texture = texture;`
+
+  With:
+  `Graphics.Blit(texture, renderTexture);`
+
+  Since the material is already set up in the editor to use the RenderTexture, it will automatically display the video. The connection chain is: Video → RenderTexture → Material → Quad, and you only need to update the RenderTexture in code.
+
+  This is actually cleaner since all the visual setup is done in the editor and the code just handles the data flow.
+
+```
+
