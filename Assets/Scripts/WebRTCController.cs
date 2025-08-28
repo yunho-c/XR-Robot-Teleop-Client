@@ -49,6 +49,7 @@ public class WebRTCController : MonoBehaviour
   private RTCPeerConnection pc;
   private RTCDataChannel cameraChannel;
   private RTCDataChannel bodyPoseChannel;
+  private VideoStreamTrack videoTrack;
   private Coroutine _sendBodyPoseCoroutine;
 
   // Use a single volatile variable to store the latest pose data.
@@ -132,6 +133,12 @@ public class WebRTCController : MonoBehaviour
     {
       SendOrientation();
     }
+    // if (videoTrack != null && videoTrack.Enabled)
+    // {
+    //   // NOTE: WebRTC.Update() invokes texture update for video tracks
+    //   // Debug.Log("Updated texture");
+    //   WebRTC.Update();
+    // }
   }
 
   public void SetServerIp(string ipAddress)
@@ -165,6 +172,11 @@ public class WebRTCController : MonoBehaviour
     {
       bodyPoseChannel.Close();
       bodyPoseChannel = null;
+    }
+    if (videoTrack != null)
+    {
+      videoTrack.Dispose();
+      videoTrack = null;
     }
     if (_sendBodyPoseCoroutine != null)
     {
@@ -324,17 +336,27 @@ public class WebRTCController : MonoBehaviour
     {
       if (e.Track.Kind == TrackKind.Video)
       {
-        if (e.Track is VideoStreamTrack videoTrack)
+        Debug.Log(e.Track);
+        Debug.Log("Video channel created.");
+        if (e.Track is VideoStreamTrack track)
         {
+          videoTrack = track;
           videoTrack.OnVideoReceived += (texture) =>
               {
-                UnityMainThreadDispatcher.Instance().Enqueue(() =>
-                    {
-                      if (videoImage != null)
-                      {
-                        videoImage.texture = texture;
-                      }
-                    });
+                Debug.Log("videoImage (original):", videoImage);
+                Debug.Log("Received first video frame");
+                videoImage.texture = texture;
+                Debug.Log("videoImage:", videoImage);
+                Debug.Log("videoImage.texture:", videoImage.texture);
+                StartCoroutine(WebRTC.Update()); // MARK
+                // UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                //     {
+                //       if (videoImage != null)
+                //       {
+                //         Debug.Log("Set video texture");
+                //         videoImage.texture = texture;
+                //       }
+                //     });
               };
         }
       }
