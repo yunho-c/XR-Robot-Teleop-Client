@@ -38,6 +38,7 @@ public class WebRTCController : MonoBehaviour
   [SerializeField] private TMP_Text statusText;
   [SerializeField] private RenderTexture videoRenderTexture;
   [SerializeField] private Material videoMaterial;
+  [SerializeField] private GameObject videoDisplayObject;
   [SerializeField] private TMP_InputField ipAddressInputField;
 
   [Header("WebRTC Settings")]
@@ -45,6 +46,8 @@ public class WebRTCController : MonoBehaviour
   public bool autoStartConnection = false;
   [Tooltip("Enable to receive video stream")]
   public bool receiveVideo = true;
+  [Tooltip("Default state for video stream visibility (overridden by PlayerPrefs)")]
+  public bool videoStreamVisible = true;
   private const ulong HIGH_WATER_MARK = 1 * 1024 * 1024; // 1 MB
 
   private RTCPeerConnection pc;
@@ -77,6 +80,10 @@ public class WebRTCController : MonoBehaviour
         Debug.LogWarning($"Ignoring invalid serverUrl from PlayerPrefs: {savedUrl}");
       }
     }
+
+    // Load video stream visibility setting
+    bool savedVideoVisible = PlayerPrefs.GetInt("videoStreamVisible", videoStreamVisible ? 1 : 0) == 1;
+    ToggleVideoStream(savedVideoVisible);
 
     statusText.text = "Ready to connect.";
 
@@ -203,6 +210,36 @@ public class WebRTCController : MonoBehaviour
     {
       StopConnection();
     }
+  }
+
+public void ToggleVideoStream(bool isOn)
+  {
+    if (isOn)
+    {
+      if (videoTrack != null)
+      {
+        videoTrack.Enabled = true;
+      }
+      if (videoDisplayObject != null)
+      {
+        videoDisplayObject.SetActive(true);
+      }
+    }
+    else
+    {
+      if (videoTrack != null)
+      {
+        videoTrack.Enabled = false;
+      }
+      if (videoDisplayObject != null)
+      {
+        videoDisplayObject.SetActive(false);
+      }
+    }
+
+    // Save the video stream visibility setting
+    PlayerPrefs.SetInt("videoStreamVisible", isOn ? 1 : 0);
+    PlayerPrefs.Save();
   }
 
   // #if UNITY_ANDROID
