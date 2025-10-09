@@ -37,7 +37,11 @@ public class WebRTCReader : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private TMP_InputField videoServerUrl;
     [SerializeField] private TMP_Text statusText;
-    
+
+    [Header("WebRTC Settings")]
+    [Tooltip("Default video server URL (used if no PlayerPrefs saved)")]
+    public string defaultVideoServerUrl = "ws://localhost:3000/ws";
+
     [Tooltip("Enable to automatically start the WebRTC connection on start")]
     public bool autoStartConnection = false;
 
@@ -50,8 +54,10 @@ public class WebRTCReader : MonoBehaviour
 
     void Start()
     {
-        // Load saved video server URL from PlayerPrefs
+        // Load saved video server URL from PlayerPrefs, fallback to default
         string savedUrl = PlayerPrefs.GetString("videoServerUrl");
+        string urlToUse = defaultVideoServerUrl; // Start with default
+
         if (!string.IsNullOrEmpty(savedUrl))
         {
             try
@@ -59,10 +65,7 @@ public class WebRTCReader : MonoBehaviour
                 System.Uri uri = new System.Uri(savedUrl);
                 if (!string.IsNullOrEmpty(uri.Host))
                 {
-                    if (videoServerUrl != null)
-                    {
-                        videoServerUrl.text = savedUrl;
-                    }
+                    urlToUse = savedUrl; // Use saved URL if valid
                 }
             }
             catch (System.Exception)
@@ -71,11 +74,17 @@ public class WebRTCReader : MonoBehaviour
             }
         }
 
+        // Set the input field to the determined URL
+        if (videoServerUrl != null)
+        {
+            videoServerUrl.text = urlToUse;
+        }
+
         if (autoStartConnection)
         {
             targetRenderer = GetComponent<Renderer>();
             StartCoroutine(WebRTC.Update());
-            string connectionUrl = !string.IsNullOrEmpty(savedUrl) ? savedUrl : videoServerUrl.text;
+            string connectionUrl = urlToUse;
             StartCoroutine(ConnectToSignalingServer(connectionUrl));
             statusText.text = $"Connecting to: {connectionUrl}";
         }
