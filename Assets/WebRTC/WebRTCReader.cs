@@ -80,13 +80,15 @@ public class WebRTCReader : MonoBehaviour
             videoServerUrl.text = urlToUse;
         }
 
+        statusText.text = "Ready to connect.";
+
         if (autoStartConnection)
         {
             targetRenderer = GetComponent<Renderer>();
             StartCoroutine(WebRTC.Update());
             string connectionUrl = FormatWebSocketUrl(urlToUse);
+            statusText.text = $"Auto-connecting to: {connectionUrl}";
             StartCoroutine(ConnectToSignalingServer(connectionUrl));
-            statusText.text = $"Connecting to: {connectionUrl}";
         }
     }
     void Update()
@@ -110,8 +112,8 @@ public class WebRTCReader : MonoBehaviour
         PlayerPrefs.SetString("videoServerUrl", url);
         PlayerPrefs.Save();
 
+        statusText.text = $"Starting video stream from: {url}";
         StartCoroutine(ConnectToSignalingServer(url));
-        statusText.text = $"Connecting to: {url}";
     }
 
     public IEnumerator ConnectToSignalingServer(String ipAddress)
@@ -121,7 +123,7 @@ public class WebRTCReader : MonoBehaviour
         ws.OnOpen += () =>
         {
             Debug.Log("WebSocket connected!");
-            statusText.text = "WebSocket connected!";
+            statusText.text = "Connected! Registering as viewer...";
             // Register as viewer
             var msg = new SignalingMsg
             {
@@ -135,18 +137,17 @@ public class WebRTCReader : MonoBehaviour
         {
             string json = System.Text.Encoding.UTF8.GetString(bytes);
             Debug.Log($"Received: {json}");
-            statusText.text = $"Received: {json}";
             HandleSignalingMessage(json);
         };
         ws.OnError += (error) =>
         {
             Debug.LogError($"WebSocket error: {error}");
-            statusText.text = $"WebSocket error: {error}";
+            statusText.text = $"Connection error: {error}";
         };
         ws.OnClose += (code) =>
         {
             Debug.Log($"WebSocket closed: {code}");
-            statusText.text = $"WebSocket closed: {code}";
+            statusText.text = "Disconnected.";
         };
         yield return ws.Connect();
     }
@@ -157,6 +158,7 @@ public class WebRTCReader : MonoBehaviour
         {
             case "offer":
                 Debug.Log($"Received offer from: {msg.from}");
+                statusText.text = "Received video offer, setting up connection...";
                 publisherId = msg.from;
                 if (msg.offer != null && !string.IsNullOrEmpty(msg.offer.sdp))
                 {
@@ -165,6 +167,7 @@ public class WebRTCReader : MonoBehaviour
                 else
                 {
                     Debug.LogError("Received offer but SDP is null or empty!");
+                    statusText.text = "Error: Invalid video offer received";
                 }
                 break;
             case "ice-candidate":
@@ -176,9 +179,11 @@ public class WebRTCReader : MonoBehaviour
                 break;
             case "error":
                 Debug.LogError($"Signaling error: {msg.message}");
+                statusText.text = $"Signaling error: {msg.message}";
                 break;
             case "peer-disconnected":
                 Debug.Log($"Peer disconnected: {msg.peerId}");
+                statusText.text = "Video publisher disconnected.";
                 break;
         }
     }
@@ -195,6 +200,18 @@ public class WebRTCReader : MonoBehaviour
         pc.OnConnectionStateChange = state =>
         {
             Debug.Log($"Connection state: {state}");
+            if (state == RTCPeerConnectionState.Connected)
+            {
+                statusText.text = "Video stream connected!";
+            }
+            else if (state == RTCPeerConnectionState.Connecting)
+            {
+                statusText.text = "Establishing video connection...";
+            }
+            else if (state == RTCPeerConnectionState.Disconnected || state == RTCPeerConnectionState.Failed)
+            {
+                statusText.text = "Video connection lost.";
+            }
         };
         // Handle ICE candidates
         pc.OnIceCandidate = candidate =>
@@ -229,6 +246,7 @@ public class WebRTCReader : MonoBehaviour
                 videoTrack.OnVideoReceived += (tex) =>
                 {
                     targetRenderer.material.mainTexture = tex;
+                    statusText.text = "Video stream active!";
                 };
             }
         };
@@ -246,6 +264,7 @@ public class WebRTCReader : MonoBehaviour
         if (answerOp.IsError)
         {
             Debug.LogError("CreateAnswer failed");
+            statusText.text = "Error: Failed to create answer";
             yield break;
         }
         // Set local description (answer)
@@ -266,7 +285,7 @@ public class WebRTCReader : MonoBehaviour
         string answerJson = JsonUtility.ToJson(answerMsg);
         Debug.Log($"Sending answer: {answerJson}");
         ws.SendText(answerJson);
-        Debug.Log("Answer sent!");
+        statusText.text = "Answer sent, waiting for video...";
     }
     private IEnumerator AddIceCandidate(IceCandidateData candidateData)
     {
