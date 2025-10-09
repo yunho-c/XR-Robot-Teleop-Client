@@ -144,6 +144,7 @@ PlayerSettings:
   preloadedAssets:
   - {fileID: 11400000, guid: da93b2d6dab07e240840b8e9bdb46908, type: 2}
   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  - {fileID: 11400000, guid: 8203f3e62f78aa54a9607d9a41f794d5, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -268,7 +269,7 @@ PlayerSettings:
   AndroidTargetArchitectures: 2
   AndroidSplashScreenScale: 0
   androidSplashScreen: {fileID: 0}
-  AndroidKeystoreName: /Users/yunhocho/GitHub/XR-Robot-Teleop-Client-Secrets/user.keystore.keystore
+  AndroidKeystoreName: C:/Users/ssangeetha3/XR-Robot-Teleop-Client-Secrets/user.keystore.keystore
   AndroidKeyaliasName: gamereleasekey
   AndroidEnableArmv9SecurityFeatures: 0
   AndroidEnableArm64MTE: 0
