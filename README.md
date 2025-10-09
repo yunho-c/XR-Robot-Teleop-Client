@@ -88,3 +88,22 @@ graph TD
 ### Contribute
 
 Please create an issue for feature requests and bug reports! PRs are always welcome. 
+
+## Collaboration
+
+### Setup
+
+Typcial location of UnityYAMLMerge:
+
+- Windows: `TODO`
+- macOS: `~/Documents/Unity/<version>/Contents/Tools/UnityYAMLMerge`
+- Linux: `TODO`
+
+```bash
+git config merge.tool unityyamlmerge
+
+git config mergetool.unityyamlmerge.cmd '<UnityYAMLMerge_path> merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
+
+git config mergetool.unityyamlmerge.trustExitCode true
+```
+

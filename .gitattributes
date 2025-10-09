@@ -49,6 +49,11 @@
 *.tif filter=lfs diff=lfs merge=lfs -text
 *.tiff filter=lfs diff=lfs merge=lfs -text
 
+# Merge for Unity files
+*.unity merge=unityyamlmerge
+*.prefab merge=unityyamlmerge
+*.asset merge=unityyamlmerge
+
 # Auto-collapse auto-generated files when inspecting commits on GitHub website
 *.asset linguist-generated
 *.mat linguist-generated
