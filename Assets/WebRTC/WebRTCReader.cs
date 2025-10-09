@@ -35,7 +35,7 @@ public class SignalingMsg
 public class WebRTCReader : MonoBehaviour
 {
     [Header("UI Elements")]
-    [SerializeField] private TMP_InputField signalingServerUrl;
+    [SerializeField] private TMP_InputField videoServerUrl;
     [SerializeField] private TMP_Text statusText;
     
     [Tooltip("Enable to automatically start the WebRTC connection on start")]
@@ -50,12 +50,34 @@ public class WebRTCReader : MonoBehaviour
 
     void Start()
     {
+        // Load saved video server URL from PlayerPrefs
+        string savedUrl = PlayerPrefs.GetString("videoServerUrl");
+        if (!string.IsNullOrEmpty(savedUrl))
+        {
+            try
+            {
+                System.Uri uri = new System.Uri(savedUrl);
+                if (!string.IsNullOrEmpty(uri.Host))
+                {
+                    if (videoServerUrl != null)
+                    {
+                        videoServerUrl.text = savedUrl;
+                    }
+                }
+            }
+            catch (System.Exception)
+            {
+                Debug.LogWarning($"Ignoring invalid videoServerUrl from PlayerPrefs: {savedUrl}");
+            }
+        }
+
         if (autoStartConnection)
         {
             targetRenderer = GetComponent<Renderer>();
             StartCoroutine(WebRTC.Update());
-            StartCoroutine(ConnectToSignalingServer("ws://128.61.140.102:3000/ws"));
-            statusText.text = $"Connecting to: ws://128.61.140.102:3000/ws";
+            string connectionUrl = !string.IsNullOrEmpty(savedUrl) ? savedUrl : videoServerUrl.text;
+            StartCoroutine(ConnectToSignalingServer(connectionUrl));
+            statusText.text = $"Connecting to: {connectionUrl}";
         }
     }
     void Update()
@@ -70,8 +92,14 @@ public class WebRTCReader : MonoBehaviour
     {
         targetRenderer = GetComponent<Renderer>();
         StartCoroutine(WebRTC.Update());
-        StartCoroutine(ConnectToSignalingServer(signalingServerUrl.text));
-        statusText.text = $"Connecting to: {signalingServerUrl.text}";
+        string url = videoServerUrl.text;
+
+        // Save the URL to PlayerPrefs for persistence
+        PlayerPrefs.SetString("videoServerUrl", url);
+        PlayerPrefs.Save();
+
+        StartCoroutine(ConnectToSignalingServer(url));
+        statusText.text = $"Connecting to: {url}";
     }
 
     public IEnumerator ConnectToSignalingServer(String ipAddress)
@@ -243,6 +271,13 @@ public class WebRTCReader : MonoBehaviour
     }
     void OnDestroy()
     {
+        // Save current URL to PlayerPrefs on destroy
+        if (videoServerUrl != null && !string.IsNullOrEmpty(videoServerUrl.text))
+        {
+            PlayerPrefs.SetString("videoServerUrl", videoServerUrl.text);
+            PlayerPrefs.Save();
+        }
+
         ws?.Close();
         pc?.Close();
         pc?.Dispose();
