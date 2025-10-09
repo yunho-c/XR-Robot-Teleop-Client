@@ -84,7 +84,7 @@ public class WebRTCReader : MonoBehaviour
         {
             targetRenderer = GetComponent<Renderer>();
             StartCoroutine(WebRTC.Update());
-            string connectionUrl = urlToUse;
+            string connectionUrl = FormatWebSocketUrl(urlToUse);
             StartCoroutine(ConnectToSignalingServer(connectionUrl));
             statusText.text = $"Connecting to: {connectionUrl}";
         }
@@ -101,7 +101,10 @@ public class WebRTCReader : MonoBehaviour
     {
         targetRenderer = GetComponent<Renderer>();
         StartCoroutine(WebRTC.Update());
-        string url = videoServerUrl.text;
+        string url = FormatWebSocketUrl(videoServerUrl.text);
+
+        // Update the input field with the formatted URL
+        videoServerUrl.text = url;
 
         // Save the URL to PlayerPrefs for persistence
         PlayerPrefs.SetString("videoServerUrl", url);
@@ -278,6 +281,40 @@ public class WebRTCReader : MonoBehaviour
         pc.AddIceCandidate(candidate);
         yield return null;
     }
+
+    private string FormatWebSocketUrl(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return defaultVideoServerUrl;
+        }
+
+        string url = input.Trim();
+
+        // If it's already a complete WebSocket URL, return as is
+        if (url.StartsWith("ws://") || url.StartsWith("wss://"))
+        {
+            return url;
+        }
+
+        // If it looks like an IP address or hostname without protocol
+        // Add ws:// prefix and :3000/ws suffix if needed
+        if (!url.Contains("://"))
+        {
+            url = "ws://" + url;
+        }
+
+        // Add port and path if not present
+        if (!url.Contains(":3000") && !url.Contains("/ws"))
+        {
+            // Remove any trailing slash before adding our suffix
+            url = url.TrimEnd('/');
+            url += ":3000/ws";
+        }
+
+        return url;
+    }
+
     void OnDestroy()
     {
         // Save current URL to PlayerPrefs on destroy
