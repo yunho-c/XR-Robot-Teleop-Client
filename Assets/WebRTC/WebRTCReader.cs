@@ -123,7 +123,7 @@ public class WebRTCReader : MonoBehaviour
         ws.OnOpen += () =>
         {
             Debug.Log("WebSocket connected!");
-            statusText.text = "Connected! Registering as viewer...";
+            statusText.text = $"Connected to {ipAddress}! Registering as viewer...";
             // Register as viewer
             var msg = new SignalingMsg
             {
