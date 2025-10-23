@@ -5,6 +5,7 @@
     "com.meta.xr.sdk.interaction.ovr": "77.0.0",
     "com.meta.xr.sdk.movement": "https://github.com/oculus-samples/Unity-Movement.git",
     "com.meta.xr.simulator": "77.0.0",
+    "com.stereolabs.zed": "file:C:/Users/ssangeetha3/Downloads/zed-unity-4.2.5/zed-unity-4.2.5/ZEDCamera/Assets",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.9.3",
     "com.unity.ide.rider": "3.0.38",
