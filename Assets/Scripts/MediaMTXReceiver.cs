@@ -16,9 +16,27 @@ public class MediaMTXReceiver : MonoBehaviour
 
     void Start()
     {
+        // Configure ICE servers
+        RTCConfiguration config = new RTCConfiguration
+        {
+            iceServers = new[]
+            {
+                new RTCIceServer {urls = new[] {"stun:stun.l.google.com:19302"}}
+            }
+        };
         // Initialize left eye stream
-        pcLeft = new RTCPeerConnection();
+        pcLeft = new RTCPeerConnection(ref config);
         receiveStreamLeft = new MediaStream();
+
+        pcLeft.OnIceConnectionChange = state =>
+        {
+            Debug.LogError($"Left ICE Connection State: {state}");
+        };
+
+        pcLeft.OnConnectionStateChange = state =>
+        {
+            Debug.LogError($"Left Connection State: {state}");
+        };
 
         pcLeft.OnTrack = e =>
         {
@@ -41,8 +59,18 @@ public class MediaMTXReceiver : MonoBehaviour
         pcLeft.AddTransceiver(TrackKind.Video, initLeft);
 
         // Initialize right eye stream
-        pcRight = new RTCPeerConnection();
+        pcRight = new RTCPeerConnection(ref config);
         receiveStreamRight = new MediaStream();
+
+        pcRight.OnIceConnectionChange = state =>
+        {
+            Debug.LogError($"Right ICE Connection State: {state}");
+        };
+
+        pcRight.OnConnectionStateChange = state =>
+        {
+            Debug.LogError($"Right Connection State: {state}");
+        };
 
         pcRight.OnTrack = e =>
         {
@@ -65,7 +93,7 @@ public class MediaMTXReceiver : MonoBehaviour
         pcRight.AddTransceiver(TrackKind.Video, initRight);
 
         StartCoroutine(WebRTC.Update());
-        StartCoroutine(createOffer(pcLeft, urlLeft));
+        // StartCoroutine(createOffer(pcLeft, urlLeft));
         StartCoroutine(createOffer(pcRight, urlRight));
     }
 
