@@ -9,14 +9,31 @@ public class MediaMTXReceiver : MonoBehaviour
     
     // Single material with both texture slots
     [SerializeField] private Material stereoMaterial;
+    
+    // GameObject to hide/show the stereo display
+    [SerializeField] private GameObject stereoDisplayObject;
+
+    // Default state for video stream visibility
+    [Tooltip("Default state for video stream visibility (overridden by PlayerPrefs)")]
+    public bool videoStreamVisible = true; 
 
     private RTCPeerConnection pcLeft;
     private RTCPeerConnection pcRight;
     private MediaStream receiveStreamLeft;
     private MediaStream receiveStreamRight;
+    
+    // NEW: References to the actual video tracks
+    private VideoStreamTrack _videoTrackLeft;
+    private VideoStreamTrack _videoTrackRight;
 
     void Start()
     {
+        // Load video stream visibility setting from PlayerPrefs
+        bool savedVideoVisible = PlayerPrefs.GetInt("stereoStreamVisible", videoStreamVisible ? 1 : 0) == 1;
+        
+        // Apply initial state
+        ToggleVideoStream(savedVideoVisible);
+
         // Configure ICE servers
         RTCConfiguration config = new RTCConfiguration
         {
@@ -49,9 +66,16 @@ public class MediaMTXReceiver : MonoBehaviour
         {
             if (e.Track is VideoStreamTrack videoTrack)
             {
+                // NEW: Store the track reference
+                _videoTrackLeft = videoTrack;
+                
+                // NEW: Apply the current visibility state to the track
+                _videoTrackLeft.Enabled = videoStreamVisible; 
+
                 videoTrack.OnVideoReceived += (tex) =>
                 {
-                    // Update the Left texture property
+                    // Update the Left texture property (no need for _videoStreamEnabled check 
+                    // here if we rely on _videoTrackLeft.Enabled)
                     if (stereoMaterial != null)
                     {
                         stereoMaterial.SetTexture("_Left", tex);
@@ -88,9 +112,16 @@ public class MediaMTXReceiver : MonoBehaviour
         {
             if (e.Track is VideoStreamTrack videoTrack)
             {
+                // NEW: Store the track reference
+                _videoTrackRight = videoTrack;
+                
+                // NEW: Apply the current visibility state to the track
+                _videoTrackRight.Enabled = videoStreamVisible;
+
                 videoTrack.OnVideoReceived += (tex) =>
                 {
                     // Update the Right texture property (assuming it's named "Right")
+                    // No need for _videoStreamEnabled check here
                     if (stereoMaterial != null)
                     {
                         stereoMaterial.SetTexture("_Right", tex);
@@ -107,6 +138,34 @@ public class MediaMTXReceiver : MonoBehaviour
         StartCoroutine(WebRTC.Update());
         StartCoroutine(createOffer(pcLeft, urlLeft));
         StartCoroutine(createOffer(pcRight, urlRight));
+    }
+
+    // MODIFIED: Public method to toggle video stream updates and display object
+    public void ToggleVideoStream(bool isOn)
+    {
+        // Update the global state
+        videoStreamVisible = isOn;
+        Debug.Log($"Video Stream visibility toggled: {isOn}");
+
+        // 1. Control the WebRTC track status (for performance)
+        if (_videoTrackLeft != null)
+        {
+            _videoTrackLeft.Enabled = isOn;
+        }
+        if (_videoTrackRight != null)
+        {
+            _videoTrackRight.Enabled = isOn;
+        }
+
+        // 2. Control the display object visibility
+        if (stereoDisplayObject != null)
+        {
+            stereoDisplayObject.SetActive(isOn);
+        }
+
+        // 3. Save the video stream visibility setting
+        PlayerPrefs.SetInt("stereoStreamVisible", isOn ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     private IEnumerator createOffer(RTCPeerConnection pc, string url)
@@ -170,6 +229,10 @@ public class MediaMTXReceiver : MonoBehaviour
 
     void OnDestroy()
     {
+        // Save the visibility state on quit/destroy
+        PlayerPrefs.SetInt("stereoStreamVisible", videoStreamVisible ? 1 : 0);
+        PlayerPrefs.Save();
+
         pcLeft?.Close();
         pcLeft?.Dispose();
         receiveStreamLeft?.Dispose();
