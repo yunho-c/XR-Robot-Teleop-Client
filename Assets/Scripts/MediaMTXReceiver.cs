@@ -6,8 +6,9 @@ public class MediaMTXReceiver : MonoBehaviour
 {
     [SerializeField] private string urlLeft = "http://localhost:8889/stream/left/whep";
     [SerializeField] private string urlRight = "http://localhost:8889/stream/right/whep";
-    [SerializeField] private Material leftMaterial;
-    [SerializeField] private Material rightMaterial;
+    
+    // Single material with both texture slots
+    [SerializeField] private Material stereoMaterial;
 
     private RTCPeerConnection pcLeft;
     private RTCPeerConnection pcRight;
@@ -24,18 +25,19 @@ public class MediaMTXReceiver : MonoBehaviour
                 new RTCIceServer {urls = new[] {"stun:stun.l.google.com:19302"}}
             }
         };
+        
         // Initialize left eye stream
         pcLeft = new RTCPeerConnection(ref config);
         receiveStreamLeft = new MediaStream();
 
         pcLeft.OnIceConnectionChange = state =>
         {
-            Debug.LogError($"Left ICE Connection State: {state}");
+            Debug.Log($"Left ICE Connection State: {state}");
         };
 
         pcLeft.OnConnectionStateChange = state =>
         {
-            Debug.LogError($"Left Connection State: {state}");
+            Debug.Log($"Left Connection State: {state}");
         };
 
         pcLeft.OnTrack = e =>
@@ -49,7 +51,12 @@ public class MediaMTXReceiver : MonoBehaviour
             {
                 videoTrack.OnVideoReceived += (tex) =>
                 {
-                    leftMaterial.mainTexture = tex;
+                    // Update the Left texture property
+                    if (stereoMaterial != null)
+                    {
+                        stereoMaterial.SetTexture("_Left", tex);
+                        Debug.Log($"Left video texture updated: {tex.width}x{tex.height}");
+                    }
                 };
             }
         };
@@ -64,12 +71,12 @@ public class MediaMTXReceiver : MonoBehaviour
 
         pcRight.OnIceConnectionChange = state =>
         {
-            Debug.LogError($"Right ICE Connection State: {state}");
+            Debug.Log($"Right ICE Connection State: {state}");
         };
 
         pcRight.OnConnectionStateChange = state =>
         {
-            Debug.LogError($"Right Connection State: {state}");
+            Debug.Log($"Right Connection State: {state}");
         };
 
         pcRight.OnTrack = e =>
@@ -83,7 +90,12 @@ public class MediaMTXReceiver : MonoBehaviour
             {
                 videoTrack.OnVideoReceived += (tex) =>
                 {
-                    rightMaterial.mainTexture = tex;
+                    // Update the Right texture property (assuming it's named "Right")
+                    if (stereoMaterial != null)
+                    {
+                        stereoMaterial.SetTexture("_Right", tex);
+                        Debug.Log($"Right video texture updated: {tex.width}x{tex.height}");
+                    }
                 };
             }
         };
@@ -93,7 +105,7 @@ public class MediaMTXReceiver : MonoBehaviour
         pcRight.AddTransceiver(TrackKind.Video, initRight);
 
         StartCoroutine(WebRTC.Update());
-        // StartCoroutine(createOffer(pcLeft, urlLeft));
+        StartCoroutine(createOffer(pcLeft, urlLeft));
         StartCoroutine(createOffer(pcRight, urlRight));
     }
 
