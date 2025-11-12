@@ -10,7 +10,7 @@ public class MediaMTXReceiver : MonoBehaviour
     public bool autoStartConnection = false;
 
     // Base address for user input (e.g., "localhost:8889/stream" or "192.168.0.101:8889/zed")
-    [SerializeField] private string defaultBaseAddress = "localhost:8889/zed";
+    [SerializeField] private string defaultBaseAddress = "192.168.0.101:8889/zed";
 
     [Header("UI Elements")]
     // NEW: Reference to the InputField (to load the saved URL)
@@ -47,7 +47,8 @@ public class MediaMTXReceiver : MonoBehaviour
         ToggleVideoStream(savedVideoVisible);
 
         // 2. Load and set the server URL (sets the internal urlLeft/urlRight)
-        string savedBaseAddress = PlayerPrefs.GetString("stereoBaseUrl", defaultBaseAddress);
+        //string savedBaseAddress = PlayerPrefs.GetString("stereoBaseUrl", defaultBaseAddress);
+        string savedBaseAddress = defaultBaseAddress;
         SetBaseStreamUrl(savedBaseAddress); // Uses savedBaseAddress but doesn't save to PlayerPrefs again
 
         // 3. NEW: Initialize Input Field and Status Text
@@ -164,7 +165,7 @@ public class MediaMTXReceiver : MonoBehaviour
         StartCoroutine(WebRTC.Update());
         
         // Check for auto-start connection
-        if (autoStartConnection)
+        if (true)
         {
             Debug.Log($"Auto-starting connection to: {savedBaseAddress}");
             UpdateStatusText($"Auto-connecting to: {savedBaseAddress}...");

@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: VideoStreamMat_Binocular
-  m_Shader: {fileID: -6465566751694194690, guid: 9cba8caf40548a143b29b2af2f46c13c, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 2931f4534fe92dc419c50aa55c6f3772, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
