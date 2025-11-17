@@ -8,14 +8,14 @@
       "hash": "1d8b49b3fee41c09a98141f1f1a5e4db47e14229"
     },
     "com.meta.xr.sdk.core": {
-      "version": "77.0.0",
-      "depth": 0,
+      "version": "81.0.0",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.interaction": {
-      "version": "77.0.0",
+      "version": "81.0.0",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -25,12 +25,12 @@
       "url": "https://packages.unity.com"
     },
     "com.meta.xr.sdk.interaction.ovr": {
-      "version": "77.0.0",
+      "version": "81.0.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.meta.xr.sdk.core": "77.0.0",
-        "com.meta.xr.sdk.interaction": "77.0.0"
+        "com.meta.xr.sdk.core": "81.0.0",
+        "com.meta.xr.sdk.interaction": "81.0.0"
       },
       "url": "https://packages.unity.com"
     },
@@ -43,10 +43,10 @@
         "com.unity.textmeshpro": "3.0.6",
         "com.unity.ugui": "1.0.0"
       },
-      "hash": "a61bb3e71fa68075d758586199a6810c63190cd9"
+      "hash": "d3b89c847dbcff03d0e318e570785d149238ad80"
     },
     "com.meta.xr.simulator": {
-      "version": "77.0.0",
+      "version": "81.0.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {},

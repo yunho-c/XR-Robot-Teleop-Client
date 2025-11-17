@@ -2,9 +2,9 @@
   "dependencies": {
     "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm",
     "com.meta.xr.sdk.core": "77.0.0",
-    "com.meta.xr.sdk.interaction.ovr": "77.0.0",
+    "com.meta.xr.sdk.interaction.ovr": "81.0.0",
     "com.meta.xr.sdk.movement": "https://github.com/oculus-samples/Unity-Movement.git",
-    "com.meta.xr.simulator": "77.0.0",
+    "com.meta.xr.simulator": "81.0.0",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.9.3",
     "com.unity.ide.rider": "3.0.38",
