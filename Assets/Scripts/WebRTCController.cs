@@ -48,6 +48,9 @@ public class WebRTCController : MonoBehaviour
   public bool receiveVideo = true;
   [Tooltip("Default state for video stream visibility (overridden by PlayerPrefs)")]
   public bool videoStreamVisible = true;
+  [Header("Debug")]
+  [Tooltip("If enabled, incoming data channel messages will be logged to the console.")]
+  public bool debugDataChannelMessages = false;
   private const ulong HIGH_WATER_MARK = 1 * 1024 * 1024; // 1 MB
 
   private RTCPeerConnection pc;
@@ -424,8 +427,19 @@ public void ToggleVideoStream(bool isOn)
 
     channel.OnMessage = bytes =>
     {
-      // Handle incoming messages if needed
-      Debug.Log($"Received message on {channel.Label} channel: {System.Text.Encoding.UTF8.GetString(bytes)}");
+      if (debugDataChannelMessages)
+      {
+        string decoded;
+        try
+        {
+          decoded = System.Text.Encoding.UTF8.GetString(bytes);
+        }
+        catch
+        {
+          decoded = $"<binary> ({bytes.Length} bytes)";
+        }
+        Debug.Log($"[WebRTC Debug] {channel.Label} <= {decoded}");
+      }
     };
   }
 

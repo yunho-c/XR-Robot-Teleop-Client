@@ -17215,7 +17215,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d34efb7ce8c303e499881845ada36924, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverUrl: mel06293d:8080/offer
+  serverUrl: localhost:8080/offer
   vrCamera: {fileID: 1187398185}
   bodyPoseProvider: {fileID: 1515905724}
   statusText: {fileID: 887255116}
@@ -17226,6 +17226,7 @@ MonoBehaviour:
   autoStartConnection: 1
   receiveVideo: 1
   videoStreamVisible: 0
+  debugDataChannelMessages: 1
 --- !u!4 &1746223497
 Transform:
   m_ObjectHideFlags: 0
