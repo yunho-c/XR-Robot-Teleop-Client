@@ -19,7 +19,7 @@
     "com.unity.webrtc": "3.0.0",
     "com.unity.xr.management": "4.5.1",
     "com.unity.xr.openxr": "1.15.1",
-    "org.mujoco": "https://github.com/google-deepmind/mujoco.git?path=unity",
+    "org.mujoco": "https://github.com/google-deepmind/mujoco.git?path=unity#3.3.5",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
