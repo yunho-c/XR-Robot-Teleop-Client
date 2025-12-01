@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d1e411c98d7a05249a48ea1be8708bae
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Prefabs/[bHapticsGlove].prefab
+  uploadId: 817952

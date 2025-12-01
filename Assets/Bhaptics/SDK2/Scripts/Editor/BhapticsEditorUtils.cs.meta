@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: a2506090217b43a2badaa36704b161ac
+timeCreated: 1739776144
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Scripts/Editor/BhapticsEditorUtils.cs
+  uploadId: 817952

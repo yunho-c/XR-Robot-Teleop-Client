@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 619ad9d9292ba484cb338c5d47d00023
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Scripts/Core/BhapticsPhysicsGloveSettings.cs
+  uploadId: 817952

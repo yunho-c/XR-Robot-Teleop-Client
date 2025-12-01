@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: dac40f39673e62a429f0ee33acdebfe3
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Examples/Scenes/PlayParamSample.unity
+  uploadId: 817952

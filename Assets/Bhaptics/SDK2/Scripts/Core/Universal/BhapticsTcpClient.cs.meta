@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 7d896ac2a7d138243a70bc481e2cc324
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Scripts/Core/Universal/BhapticsTcpClient.cs
+  uploadId: 817952

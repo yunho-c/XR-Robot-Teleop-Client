@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c0cf83ca43c71144da2f6ddbcbe75e13
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Fonts/SpoqaHanSansNeo_TTF_subset/LICENSE
+  uploadId: 817952
