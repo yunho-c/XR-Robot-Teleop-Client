@@ -42,4 +42,19 @@ public class UnityMainThreadDispatcher : MonoBehaviour
       }
     }
   }
+
+  void OnDestroy()
+  {
+    // Clear the execution queue to prevent memory leaks
+    lock (_executionQueue)
+    {
+      _executionQueue.Clear();
+    }
+    
+    // Reset the instance if this is the singleton instance being destroyed
+    if (_instance == this)
+    {
+      _instance = null;
+    }
+  }
 }

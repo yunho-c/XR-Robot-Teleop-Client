@@ -525,6 +525,15 @@ public void ToggleVideoStream(bool isOn)
     StopConnection();
   }
 
+  void OnDestroy()
+  {
+    // Stop all running coroutines
+    StopAllCoroutines();
+    
+    // Ensure proper cleanup when the GameObject is destroyed
+    StopConnection();
+  }
+
   private static RTCConfiguration GetSelectedSdpSemantics()
   {
     return new RTCConfiguration

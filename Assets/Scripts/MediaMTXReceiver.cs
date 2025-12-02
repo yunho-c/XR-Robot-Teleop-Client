@@ -284,12 +284,14 @@ public class MediaMTXReceiver : MonoBehaviour
         UpdateStatusText($"Sending offer to {url}...");
         var content = new System.Net.Http.StringContent(offer.sdp);
         content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/sdp");
-        var client = new System.Net.Http.HttpClient();
 
         var task = System.Threading.Tasks.Task.Run(async () => {
-            var res = await client.PostAsync(new System.UriBuilder(url).Uri, content);
-            res.EnsureSuccessStatusCode();
-            return await res.Content.ReadAsStringAsync();
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                var res = await client.PostAsync(new System.UriBuilder(url).Uri, content);
+                res.EnsureSuccessStatusCode();
+                return await res.Content.ReadAsStringAsync();
+            }
         });
         yield return new WaitUntil(() => task.IsCompleted);
         
@@ -322,6 +324,9 @@ public class MediaMTXReceiver : MonoBehaviour
 
     void OnDestroy()
     {
+        // Stop all running coroutines
+        StopAllCoroutines();
+        
         // Save the current visibility state
         PlayerPrefs.SetInt("stereoStreamVisible", videoStreamVisible ? 1 : 0);
         

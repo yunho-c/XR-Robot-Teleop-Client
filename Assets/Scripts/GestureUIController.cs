@@ -10,8 +10,8 @@ public class GestureUIController : MonoBehaviour
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip gestureDetectedSound;
     [SerializeField] private AudioClip gestureLostSound; // Optional
-    
-    private bool isUIVisible = false;
+
+    private bool isUIVisible = true; // UI visible by default
 
     public void OnGestureDetected()
     {
