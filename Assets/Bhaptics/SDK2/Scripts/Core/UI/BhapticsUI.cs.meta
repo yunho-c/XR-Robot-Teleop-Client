@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 1e73d40d7fdd56646a3cb99deaea917f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Scripts/Core/UI/BhapticsUI.cs
+  uploadId: 817952

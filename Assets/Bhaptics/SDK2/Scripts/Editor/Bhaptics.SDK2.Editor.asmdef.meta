@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1c8442bf8580b9246a99702a6e88c576
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/Scripts/Editor/Bhaptics.SDK2.Editor.asmdef
+  uploadId: 817952

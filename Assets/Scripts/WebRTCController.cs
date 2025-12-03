@@ -306,6 +306,7 @@ public void ToggleVideoStream(bool isOn)
 
     // Send offer to server
     statusText.text = $"Sending offer to {serverUrl}...";
+    Debug.Log($"[WebRTCController] Initiating WebRTC signaling to URL: {serverUrl}");
     SignalingMessage offerMessage = new SignalingMessage { type = "offer", sdp = desc.sdp };
     string jsonOffer = JsonUtility.ToJson(offerMessage);
 
@@ -362,6 +363,19 @@ public void ToggleVideoStream(bool isOn)
         bodyPoseChannel = channel;
         SetupBodyPoseDataChannel(channel);
 
+      }
+      else if (channel.Label == "haptics")
+      {
+        // Notify WebRTCHapticReceiver if it exists
+        WebRTCHapticReceiver hapticReceiver = FindObjectOfType<WebRTCHapticReceiver>();
+        if (hapticReceiver != null)
+        {
+          hapticReceiver.OnHapticsChannelReceived(channel);
+        }
+        else
+        {
+          SetupDataChannelEvents(channel);
+        }
       }
       else
       {
@@ -522,15 +536,6 @@ public void ToggleVideoStream(bool isOn)
   {
     PlayerPrefs.SetString("serverUrl", serverUrl);
     PlayerPrefs.Save();
-    StopConnection();
-  }
-
-  void OnDestroy()
-  {
-    // Stop all running coroutines
-    StopAllCoroutines();
-    
-    // Ensure proper cleanup when the GameObject is destroyed
     StopConnection();
   }
 

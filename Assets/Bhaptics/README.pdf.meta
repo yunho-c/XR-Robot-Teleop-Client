@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ef62ca385768f2842bc5e366bd371d64
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/README.pdf
+  uploadId: 817952

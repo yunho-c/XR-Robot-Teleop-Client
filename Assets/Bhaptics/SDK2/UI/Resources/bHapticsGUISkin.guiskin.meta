@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5ec1e29453d775a479b4d48a5786ce22
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 76647
+  packageName: bHaptics Haptic Plugin
+  packageVersion: 2.6.0
+  assetPath: Assets/Bhaptics/SDK2/UI/Resources/bHapticsGUISkin.guiskin
+  uploadId: 817952
