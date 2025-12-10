@@ -47,8 +47,9 @@ public class MediaMTXReceiver : MonoBehaviour
         ToggleVideoStream(savedVideoVisible);
 
         // 2. Load and set the server URL (sets the internal urlLeft/urlRight)
-        //string savedBaseAddress = PlayerPrefs.GetString("stereoBaseUrl", defaultBaseAddress);
-        string savedBaseAddress = defaultBaseAddress;
+        string savedBaseAddress = PlayerPrefs.GetString("stereoBaseUrl", defaultBaseAddress);
+        // string savedBaseAddress = defaultBaseAddress;
+        
         SetBaseStreamUrl(savedBaseAddress); // Uses savedBaseAddress but doesn't save to PlayerPrefs again
 
         // 3. NEW: Initialize Input Field and Status Text
