@@ -220,6 +220,8 @@ public class MediaMTXReceiver : MonoBehaviour
     // Public method to be called from a UI InputField's On End Edit (String) event
     public void SetBaseStreamUrl(string baseAddressAndPort)
     {
+        if (string.IsNullOrEmpty(baseAddressAndPort)) return;
+        
         // 1. Save the new base address
         PlayerPrefs.SetString("stereoBaseUrl", baseAddressAndPort);
         PlayerPrefs.Save();
