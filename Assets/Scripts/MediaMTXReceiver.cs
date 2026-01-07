@@ -221,7 +221,7 @@ public class MediaMTXReceiver : MonoBehaviour
     public void SetBaseStreamUrl(string baseAddressAndPort)
     {
         if (string.IsNullOrEmpty(baseAddressAndPort)) return;
-        
+
         // 1. Save the new base address
         PlayerPrefs.SetString("stereoBaseUrl", baseAddressAndPort);
         PlayerPrefs.Save();
@@ -236,7 +236,6 @@ public class MediaMTXReceiver : MonoBehaviour
     public void ToggleVideoStream(bool isOn)
     {
         videoStreamVisible = isOn;
-        // Debug.Log($"Video Stream visibility toggled: {isOn}"); // Too chatty
 
         if (_videoTrackLeft != null)
         {

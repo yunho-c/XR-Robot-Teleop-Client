@@ -1622,7 +1622,7 @@ GameObject:
   - component: {fileID: 255038648}
   - component: {fileID: 255038647}
   - component: {fileID: 255038646}
-  - component: {fileID: 255038649}
+  - component: {fileID: 255038650}
   m_Layer: 0
   m_Name: VideoStreamingViewport
   m_TagString: Untagged
@@ -1690,7 +1690,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5e1d5e7379e114ad49a9cd559f359d8d, type: 2}
+  - {fileID: 2100000, guid: 379724b476f755f48b45d0d16b389716, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1720,7 +1720,7 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 255038644}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &255038649
+--- !u!114 &255038650
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1729,14 +1729,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 255038644}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aef9c66dcaa411741801d2fd6ab5b999, type: 3}
+  m_Script: {fileID: 11500000, guid: 7821a08a03a480544a8c1ab7e4195590, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  videoServerUrl: {fileID: 1350388493}
+  autoStartConnection: 0
+  defaultBaseAddress: 192.168.0.101:8889/zed
+  ipAddressInputField: {fileID: 1350388493}
   statusText: {fileID: 1350388492}
-  defaultVideoServerUrl: localhost
-  autoStartConnection: 1
-  peerId: UNITY
+  stereoMaterial: {fileID: 2100000, guid: 379724b476f755f48b45d0d16b389716, type: 2}
+  stereoDisplayObject: {fileID: 255038644}
+  videoStreamVisible: 1
 --- !u!1 &255424862
 GameObject:
   m_ObjectHideFlags: 0
@@ -9153,7 +9155,7 @@ PrefabInstance:
     - target: {fileID: 633345792003407783, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1746223496}
+      objectReference: {fileID: 255038650}
     - target: {fileID: 633345792003407783, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -9164,7 +9166,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 633345792003407783, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: WebRTCController, Assembly-CSharp
+      value: MediaMTXReceiver, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 633345792003407783, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -9525,7 +9527,7 @@ PrefabInstance:
     - target: {fileID: 5977401839508810893, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 255038649}
+      objectReference: {fileID: 255038650}
     - target: {fileID: 5977401839508810893, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -9536,7 +9538,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5977401839508810893, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: WebRTCReader, Assembly-CSharp
+      value: MediaMTXReceiver, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 5977401839508810893, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: onValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -9708,7 +9710,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7543429629126906518, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: sceneName
-      value: ZEDv2
+      value: MainScene
       objectReference: {fileID: 0}
     - target: {fileID: 7563637538697258497, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_AnchorMax.y
@@ -9781,10 +9783,14 @@ PrefabInstance:
     - target: {fileID: 8669094407375672109, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_OnEndEdit.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 255038650}
     - target: {fileID: 8669094407375672109, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_OnEndEdit.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: 
+      value: SetBaseStreamUrl
+      objectReference: {fileID: 0}
+    - target: {fileID: 8669094407375672109, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
+      propertyPath: m_OnEndEdit.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: MediaMTXReceiver, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 8669094407375672115, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_AnchorMax.y
@@ -9812,9 +9818,9 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9046937242764554099, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_text
-      value: 'Binocular
+      value: 'Webcam
 
-        Vision'
+        Mode'
       objectReference: {fileID: 0}
     - target: {fileID: 9084934972173877447, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_Layer
@@ -12716,7 +12722,7 @@ MonoBehaviour:
   videoDisplayObject: {fileID: 255038644}
   ipAddressInputField: {fileID: 1350388489}
   autoStartConnection: 0
-  receiveVideo: 1
+  receiveVideo: 0
   videoStreamVisible: 0
 --- !u!4 &1746223497
 Transform:
