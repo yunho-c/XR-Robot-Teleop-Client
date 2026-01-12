@@ -1736,6 +1736,7 @@ MonoBehaviour:
   defaultBaseAddress: 192.168.0.101:8889/zed
   ipAddressInputField: {fileID: 1350388493}
   statusText: {fileID: 1350388492}
+  connectToggle: {fileID: 1350388491}
   stereoMaterial: {fileID: 2100000, guid: 379724b476f755f48b45d0d16b389716, type: 2}
   stereoDisplayObject: {fileID: 255038644}
   videoStreamVisible: 1
@@ -9816,6 +9817,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 5
       objectReference: {fileID: 0}
+    - target: {fileID: 8974579521781360516, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
+      propertyPath: m_text
+      value: 'Teleoperation Controller Status (DEBUG): '
+      objectReference: {fileID: 0}
     - target: {fileID: 9046937242764554099, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
       propertyPath: m_text
       value: 'Webcam
@@ -9892,6 +9897,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1350388491 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5977401839508810893, guid: 4b97ac8c74f3dc440842829c03f62e37, type: 3}
+  m_PrefabInstance: {fileID: 1350388487}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9085046f02f69544eb97fd06b6048fe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &1350388492 stripped
@@ -14787,6 +14803,26 @@ PrefabInstance:
       propertyPath: _materialEditor
       value: 
       objectReference: {fileID: 684156072}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[0].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 41c5e88f8eeab0b47a424cc4ecc93ce1, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[1].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[2].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[3].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[4].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
     - target: {fileID: 2345077059935029653, guid: 37119ad198984ec41b27b83424170254, type: 3}
       propertyPath: _hmd
       value: 

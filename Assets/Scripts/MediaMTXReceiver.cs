@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Unity.WebRTC;
-using TMPro; // NEW: Added namespace for TextMeshPro
+using TMPro;
 
 public class MediaMTXReceiver : MonoBehaviour
 {
@@ -13,10 +13,12 @@ public class MediaMTXReceiver : MonoBehaviour
     [SerializeField] private string defaultBaseAddress = "192.168.0.101:8889/zed";
 
     [Header("UI Elements")]
-    // NEW: Reference to the InputField (to load the saved URL)
+    // Reference to the InputField (to load the saved URL)
     [SerializeField] private TMP_InputField ipAddressInputField; 
-    // NEW: Reference to the Text component (to show status)
+    // Reference to the Text component (to show status)
     [SerializeField] private TMP_Text statusText;
+    // Reference to the connect toggle to disable during connection
+    [SerializeField] private UnityEngine.UI.Toggle connectToggle;
     
     // Single material with both texture slots
     [SerializeField] private Material stereoMaterial;
@@ -40,6 +42,9 @@ public class MediaMTXReceiver : MonoBehaviour
     private VideoStreamTrack _videoTrackLeft;
     private VideoStreamTrack _videoTrackRight;
 
+    // Guard against repeated connection attempts
+    private bool isConnecting = false;
+
     void Start()
     {
         // 1. Load saved stream visibility state and apply it
@@ -48,20 +53,22 @@ public class MediaMTXReceiver : MonoBehaviour
 
         // 2. Load and set the server URL (sets the internal urlLeft/urlRight)
         string savedBaseAddress = PlayerPrefs.GetString("stereoBaseUrl", defaultBaseAddress);
-        // string savedBaseAddress = defaultBaseAddress;
         
-        SetBaseStreamUrl(savedBaseAddress); // Uses savedBaseAddress but doesn't save to PlayerPrefs again
+        SetBaseStreamUrl(savedBaseAddress);
 
-        // 3. NEW: Initialize Input Field and Status Text
+        // 3. Initialize Input Field and Status Text
         if (ipAddressInputField != null)
         {
-            // Set the input field text to the URL loaded from PlayerPrefs
             ipAddressInputField.text = savedBaseAddress;
         }
         if (statusText != null)
         {
             statusText.text = "Ready to connect.";
         }
+
+        // Reset connection state
+        isConnecting = false;
+        SetConnectToggleInteractable(true);
 
         // Configure ICE servers
         RTCConfiguration config = new RTCConfiguration
@@ -89,6 +96,19 @@ public class MediaMTXReceiver : MonoBehaviour
             {
                 UpdateStatusText("Left Peer connected!");
             }
+            else if (state == RTCPeerConnectionState.Failed || 
+                     state == RTCPeerConnectionState.Disconnected ||
+                     state == RTCPeerConnectionState.Closed)
+            {
+                // Only reset if right is also not connected
+                if (pcRight == null || 
+                    pcRight.ConnectionState == RTCPeerConnectionState.Failed ||
+                    pcRight.ConnectionState == RTCPeerConnectionState.Disconnected ||
+                    pcRight.ConnectionState == RTCPeerConnectionState.Closed)
+                {
+                    ResetConnectionState($"Connection {state}. Try again.");
+                }
+            }
         };
 
         pcLeft.OnTrack = e =>
@@ -108,7 +128,6 @@ public class MediaMTXReceiver : MonoBehaviour
                     if (stereoMaterial != null)
                     {
                         stereoMaterial.SetTexture("_Left", tex);
-                        // UpdateStatusText("Left video stream active!"); // Too frequent, leave to general connected status
                     }
                 };
             }
@@ -133,7 +152,21 @@ public class MediaMTXReceiver : MonoBehaviour
             Debug.Log($"Right Connection State: {state}");
             if (state == RTCPeerConnectionState.Connected)
             {
-                UpdateStatusText("Right Peer connected! Streaming active.");
+                // Both streams connected - reset the guard and re-enable button
+                if (pcLeft != null && pcLeft.ConnectionState == RTCPeerConnectionState.Connected)
+                {
+                    ResetConnectionState("Streaming active.");
+                }
+                else
+                {
+                    UpdateStatusText("Right Peer connected! Waiting for left...");
+                }
+            }
+            else if (state == RTCPeerConnectionState.Failed || 
+                     state == RTCPeerConnectionState.Disconnected ||
+                     state == RTCPeerConnectionState.Closed)
+            {
+                ResetConnectionState($"Connection {state}. Try again.");
             }
         };
 
@@ -174,7 +207,7 @@ public class MediaMTXReceiver : MonoBehaviour
         }
     }
 
-    // NEW: Helper method to safely update the status text
+    // Helper method to safely update the status text
     private void UpdateStatusText(string message)
     {
         if (statusText != null)
@@ -184,14 +217,43 @@ public class MediaMTXReceiver : MonoBehaviour
         Debug.Log($"Status: {message}");
     }
 
+    // Helper method to safely set toggle interactable state
+    private void SetConnectToggleInteractable(bool interactable)
+    {
+        if (connectToggle != null)
+        {
+            connectToggle.interactable = interactable;
+        }
+    }
+
+    // Helper method to reset connection state and re-enable UI
+    private void ResetConnectionState(string statusMessage)
+    {
+        isConnecting = false;
+        SetConnectToggleInteractable(true);
+        UpdateStatusText(statusMessage);
+    }
+
     // Public function to be called by a dedicated "Connect" button.
     public void StartStream()
     {
+        // Guard against repeated clicks while connecting
+        if (isConnecting)
+        {
+            Debug.Log("Connection already in progress, ignoring click.");
+            UpdateStatusText("Connection in progress, please wait...");
+            return;
+        }
+
         if (pcLeft == null || pcRight == null)
         {
             UpdateStatusText("Error: Peer connections not initialized. Restart component.");
             return;
         }
+        
+        // Set the guard and disable the button
+        isConnecting = true;
+        SetConnectToggleInteractable(false);
         
         UpdateStatusText($"Starting stream connection offers for {urlLeft} and {urlRight}...");
         
@@ -200,7 +262,7 @@ public class MediaMTXReceiver : MonoBehaviour
         StartCoroutine(createOffer(pcRight, urlRight));
     }
     
-    // NEW: Public method to manually stop the connection
+    // Public method to manually stop the connection
     public void StopStream()
     {
         pcLeft?.Close();
@@ -261,7 +323,7 @@ public class MediaMTXReceiver : MonoBehaviour
         yield return op;
         if (op.IsError) {
             Debug.LogError($"CreateOffer() failed for {url}");
-            UpdateStatusText($"Error creating offer for {url}");
+            ResetConnectionState($"Error creating offer for {url}");
             yield break;
         }
 
@@ -274,7 +336,7 @@ public class MediaMTXReceiver : MonoBehaviour
         yield return op;
         if (op.IsError) {
             Debug.LogError($"SetLocalDescription() failed for {url}");
-            UpdateStatusText($"Error setting local description for {url}");
+            ResetConnectionState($"Error setting local description for {url}");
             yield break;
         }
 
@@ -299,7 +361,7 @@ public class MediaMTXReceiver : MonoBehaviour
         
         if (task.Exception != null) {
             Debug.LogError($"PostOffer() failed for {url}: {task.Exception.InnerException?.Message ?? task.Exception.Message}");
-            UpdateStatusText($"Connection failed: {task.Exception.InnerException?.Message ?? task.Exception.Message}");
+            ResetConnectionState($"Connection failed: {task.Exception.InnerException?.Message ?? task.Exception.Message}");
             yield break;
         }
 
@@ -316,7 +378,7 @@ public class MediaMTXReceiver : MonoBehaviour
         yield return op;
         if (op.IsError) {
             Debug.LogError($"SetRemoteDescription() failed for {url}");
-            UpdateStatusText($"Error setting remote description for {url}");
+            ResetConnectionState($"Error setting remote description for {url}");
             yield break;
         }
 

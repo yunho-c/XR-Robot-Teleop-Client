@@ -14781,6 +14781,26 @@ PrefabInstance:
       propertyPath: _materialEditor
       value: 
       objectReference: {fileID: 684156072}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[0].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 41c5e88f8eeab0b47a424cc4ecc93ce1, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[1].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[2].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[3].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
+    - target: {fileID: 1752313984260767305, guid: 37119ad198984ec41b27b83424170254, type: 3}
+      propertyPath: _fingerStateThresholds.Array.data[4].StateThresholds
+      value: 
+      objectReference: {fileID: 11400000, guid: 39ed6ef3eab7dfe4292472ea5ebc3d6a, type: 2}
     - target: {fileID: 2345077059935029653, guid: 37119ad198984ec41b27b83424170254, type: 3}
       propertyPath: _hmd
       value: 
